@@ -5,5 +5,3 @@ declare global {
     WebApp?: MaxWebApp
   }
 }
-
-export {}

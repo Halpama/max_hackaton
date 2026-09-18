@@ -1,4 +1,4 @@
-export { INTEREST_OPTIONS, LOADING_STEPS, MOCK_ROUTE, PACE_OPTIONS, DEFAULT_TRIP_DRAFT } from './mock'
+export { INTEREST_OPTIONS, LOADING_STEPS, MOCK_ROUTE, MOCK_TRIPS, PACE_OPTIONS, DEFAULT_TRIP_DRAFT } from './mock'
 export { TripPlannerProvider } from './TripPlannerProvider'
 export { useTripPlanner } from './useTripPlanner'
 export type {
@@ -11,4 +11,6 @@ export type {
   TransitMode,
   TripDraft,
   TripPace,
+  TripStatus,
+  TripSummary,
 } from './types'

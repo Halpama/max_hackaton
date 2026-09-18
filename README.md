@@ -6,10 +6,10 @@
 
 ```text
 web/src/
-  app/                 # провайдеры, роутер, стили
-  pages/               # экраны: new-trip → preferences → loading → route → place
-  features/trip-planner/  # UI, mock-данные, состояние черновика
-  shared/              # api, config, hooks, lib
+  app/                    # провайдеры, роутер, стили
+  pages/                  # экраны
+  features/trip-planner/  # UI, mock, состояние
+  shared/                 # api, config, hooks, lib
 ```
 
 ## Запуск
@@ -22,10 +22,10 @@ npm run dev
 
 ### Поток экранов (мок)
 
-1. `/` — новая поездка  
-2. `/preferences` — интересы и темп  
-3. `/loading` — ИИ собирает маршрут  
-4. `/route` — готовый план по дням  
-5. `/places/:placeId` — карточка места  
+1. `/` — главная: табы **Поездки** / **Избранное** (поиск + фильтр по городам)
+2. `/trips/new` — новая поездка
+3. `/preferences` — интересы и темп
+4. `/loading` — ИИ собирает маршрут
+5. `/route` — план по дням + **превью карты** с точками
+6. `/places/:placeId` — карточка места
 
-Состояние черновика держится в `TripPlannerProvider` без бэкенда
