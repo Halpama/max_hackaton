@@ -29,4 +29,3 @@ npm run dev
 5. `/route` — план по дням + **превью карты** с точками
 6. `/places/:placeId` — карточка места
 
-Макет: `web/layout.pen`.
