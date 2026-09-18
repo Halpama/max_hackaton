@@ -3,20 +3,50 @@ import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/shared/config'
 import {
   ActivityCard,
+  BagIcon,
   CalendarIcon,
   DayTabs,
+  MapIcon,
   PersonIcon,
+  RubleIcon,
   Screen,
   TransitHint,
   useTripPlanner,
 } from '@/features/trip-planner'
 import { DayRouteMap } from '@/features/trip-planner/ui/DayRouteMap'
+import { RouteMainTabs, type RouteMainTab } from '@/features/trip-planner/ui/RouteMainTabs'
+import { PackingPanel } from '@/features/trip-planner/ui/PackingPanel'
+import { BudgetPanel } from '@/features/trip-planner/ui/BudgetPanel'
+import {
+  formatMoney,
+  useTripLocalState,
+} from '@/features/trip-planner/model/useTripLocalState'
 import styles from '@/features/trip-planner/ui/screens.module.css'
 
 export function ReadyRoutePage() {
   const navigate = useNavigate()
-  const { route } = useTripPlanner()
+  const { route, draft } = useTripPlanner()
+  const [mainTab, setMainTab] = useState<RouteMainTab>('route')
   const [activeDayId, setActiveDayId] = useState(route.days[0]?.id ?? '')
+
+  const tripId = useMemo(
+    () => `${route.city}-${route.dateLabel}`.toLowerCase().replace(/\s+/g, '-'),
+    [route.city, route.dateLabel],
+  )
+  const plannedBudget = draft.budget > 0 ? draft.budget : 45_000
+
+  const {
+    packing,
+    updatePacking,
+    ledger,
+    addLedgerEntry,
+    removeLedgerEntry,
+    remaining,
+    spent,
+    toppedUp,
+    createId,
+    todayIso,
+  } = useTripLocalState(tripId, plannedBudget)
 
   const day = useMemo(
     () => route.days.find((item) => item.id === activeDayId) ?? route.days[0],
@@ -36,7 +66,7 @@ export function ReadyRoutePage() {
       <div className={styles.summary}>
         <div className={styles.top}>
           <h1 className={styles.city}>{route.city}</h1>
-          <BudgetBadge label={route.budgetLabel} />
+          <RemainingBadge remaining={remaining} />
         </div>
         <p className={styles.meta}>
           <span className={styles.metaItem}>
@@ -51,63 +81,97 @@ export function ReadyRoutePage() {
         </p>
       </div>
 
-      <div className={styles.mapWrap}>
-        <DayRouteMap
-          places={dayPlaces}
-          legModes={(day?.transits ?? []).map((leg) => leg?.mode)}
+      <div className={styles.mainTabs}>
+        <RouteMainTabs
+          value={mainTab}
+          onChange={setMainTab}
+          tabs={[
+            { id: 'route', label: 'Маршрут', icon: <MapIcon /> },
+            { id: 'packing', label: 'Сборы', icon: <BagIcon /> },
+            { id: 'budget', label: 'Бюджет', icon: <RubleIcon /> },
+          ]}
         />
       </div>
 
-      <div style={{ paddingTop: 14, paddingBottom: 4 }}>
-        <DayTabs
-          days={route.days.map(({ id, label }) => ({ id, label }))}
-          activeId={day?.id ?? ''}
-          onChange={setActiveDayId}
+      {mainTab === 'route' ? (
+        <>
+          <div className={styles.mapWrap}>
+            <DayRouteMap
+              places={dayPlaces}
+              legModes={(day?.transits ?? []).map((leg) => leg?.mode)}
+            />
+          </div>
+
+          <div style={{ paddingTop: 14, paddingBottom: 4 }}>
+            <DayTabs
+              days={route.days.map(({ id, label }) => ({ id, label }))}
+              activeId={day?.id ?? ''}
+              onChange={setActiveDayId}
+            />
+          </div>
+
+          <div className={styles.list} key={day?.id ?? 'day'}>
+            {day?.activities.map((activity, index) => {
+              const fromPlace = route.places[activity.placeId]
+              const toPlace = route.places[day.activities[index + 1]?.placeId]
+              const transit = day.transits[index]
+
+              return (
+                <div
+                  key={activity.id}
+                  className={styles.listItem}
+                  style={{ animationDelay: `${index * 90}ms` }}
+                >
+                  <ActivityCard
+                    activity={activity}
+                    onClick={() => navigate(ROUTES.place(activity.placeId))}
+                  />
+                  {transit && fromPlace && toPlace ? (
+                    <TransitHint
+                      leg={transit}
+                      from={fromPlace.coordinates}
+                      to={toPlace.coordinates}
+                    />
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      ) : null}
+
+      {mainTab === 'packing' ? (
+        <PackingPanel blocks={packing} onChange={updatePacking} createId={createId} />
+      ) : null}
+
+      {mainTab === 'budget' ? (
+        <BudgetPanel
+          plannedBudget={plannedBudget}
+          remaining={remaining}
+          spent={spent}
+          toppedUp={toppedUp}
+          ledger={ledger}
+          todayIso={todayIso}
+          onAdd={addLedgerEntry}
+          onRemove={removeLedgerEntry}
         />
-      </div>
-
-      <div className={styles.list} key={day?.id ?? 'day'}>
-        {day?.activities.map((activity, index) => {
-          const fromPlace = route.places[activity.placeId]
-          const toPlace = route.places[day.activities[index + 1]?.placeId]
-          const transit = day.transits[index]
-
-          return (
-            <div
-              key={activity.id}
-              className={styles.listItem}
-              style={{ animationDelay: `${index * 90}ms` }}
-            >
-              <ActivityCard
-                activity={activity}
-                onClick={() => navigate(ROUTES.place(activity.placeId))}
-              />
-              {transit && fromPlace && toPlace ? (
-                <TransitHint
-                  leg={transit}
-                  from={fromPlace.coordinates}
-                  to={toPlace.coordinates}
-                />
-              ) : null}
-            </div>
-          )
-        })}
-      </div>
+      ) : null}
     </Screen>
   )
 }
 
-function BudgetBadge({ label }: { label: string }) {
-  const match = label.match(/^(~)?\s*([\d\s]+)\s*(₽|руб\.?)?$/)
-  const prefix = match?.[1] ?? '~'
-  const value = (match?.[2] ?? label).trim()
-  const currency = match?.[3] ?? '₽'
+function RemainingBadge({ remaining }: { remaining: number }) {
+  const overspent = remaining < 0
 
   return (
-    <span className={styles.badge}>
-      <span className={styles.badgePrefix}>{prefix}</span>
-      <span className={styles.badgeValue}>{value}</span>
-      <span className={styles.badgeCurrency}>{currency}</span>
+    <span className={overspent ? styles.badgeWarn : styles.badge} title="Остаток бюджета">
+      <span className={styles.badgeStack}>
+        <span className={styles.badgePrefix}>{overspent ? 'Перерасход' : 'Осталось'}</span>
+        <span className={styles.badgeAmount}>
+          <span className={styles.badgeValue}>{formatMoney(Math.abs(remaining))}</span>
+          <span className={styles.badgeCurrency}>₽</span>
+        </span>
+      </span>
     </span>
   )
 }

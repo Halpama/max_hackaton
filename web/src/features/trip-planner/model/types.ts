@@ -1,3 +1,6 @@
+/** Upper bound for trip budget input (rubles). */
+export const MAX_TRIP_BUDGET = 9_999_999
+
 export type TripPace = 'calm' | 'medium' | 'active'
 
 export type InterestId =

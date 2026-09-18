@@ -16,12 +16,18 @@ export { OptionCard } from './OptionCard'
 export { ProgressSteps } from './ProgressSteps'
 export { DayTabs } from './DayTabs'
 export { HomeTabs, type HomeTab } from './HomeTabs'
+export { RouteMainTabs, type RouteMainTab } from './RouteMainTabs'
+export { PackingPanel } from './PackingPanel'
+export { BudgetPanel } from './BudgetPanel'
 export { ActivityCard } from './ActivityCard'
 export { TransitHint } from './TransitHint'
 export { PlaceDetails } from './PlaceDetails'
 export {
+  BagIcon,
+  BulletListIcon,
   CalendarIcon,
   CheckIcon,
+  ChecklistIcon,
   FoodIcon,
   HeartIcon,
   MapIcon,
@@ -34,5 +40,6 @@ export {
   SearchIcon,
   SparklesIcon,
   StarIcon,
+  TextBlockIcon,
   WalkIcon,
 } from './icons'

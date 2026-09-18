@@ -62,6 +62,13 @@
   gap: 10px;
 }
 
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 18px;
+}
+
 .label {
   margin: 0;
   font-size: 12px;
@@ -69,6 +76,41 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--tp-muted);
+}
+
+.hintBtn {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--tp-muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.hintBtn:active {
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary-deep);
+  border-color: rgba(0, 122, 255, 0.28);
+}
+
+.hintText {
+  margin: -4px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 122, 255, 0.06);
+  color: var(--tp-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 500;
 }
 
 .card {

@@ -24,6 +24,8 @@ type RenderPlaces = (
 ) => void
 
 const DEFAULT_CENTER: LngLat = [30.31456, 59.93984]
+const CAMERA_DURATION_MS = 850
+const ROUTE_DRAW_MS = 950
 
 const OSM_STYLE = {
   version: 8 as const,
@@ -90,6 +92,29 @@ function projectPath(map: MaplibreMap, coords: LngLat[]) {
     .join(' ')
 }
 
+function easeOutCubic(t: number) {
+  return 1 - (1 - t) ** 3
+}
+
+function sliceRouteProgress(coords: LngLat[], progress: number): LngLat[] {
+  if (coords.length < 2) return coords
+  const t = Math.min(1, Math.max(0, progress))
+  if (t <= 0) return [coords[0]]
+  if (t >= 1) return coords
+
+  const segments = coords.length - 1
+  const exact = t * segments
+  const index = Math.floor(exact)
+  const local = exact - index
+  const from = coords[index]
+  const to = coords[Math.min(index + 1, coords.length - 1)]
+  const interpolated: LngLat = [
+    from[0] + (to[0] - from[0]) * local,
+    from[1] + (to[1] - from[1]) * local,
+  ]
+  return [...coords.slice(0, index + 1), interpolated]
+}
+
 function waitForSize(el: HTMLElement, signal: AbortSignal): Promise<void> {
   if (el.clientWidth > 0 && el.clientHeight > 0) return Promise.resolve()
 
@@ -134,6 +159,7 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
   const placesRef = useRef(places)
   const legModesRef = useRef(legModes)
   const routeAbortRef = useRef<AbortController | null>(null)
+  const routeAnimRef = useRef(0)
   const [status, setStatus] = useState<MapStatus>('loading')
 
   useEffect(() => {
@@ -162,18 +188,56 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
       path.setAttribute('d', projectPath(map, routeCoordsRef.current))
     }
 
+    const stopRouteAnimation = () => {
+      if (routeAnimRef.current) {
+        cancelAnimationFrame(routeAnimRef.current)
+        routeAnimRef.current = 0
+      }
+    }
+
     const setRouteCoords = (coords: LngLat[]) => {
+      stopRouteAnimation()
       routeCoordsRef.current = coords
       redrawPath()
     }
 
-    const fitPlaces = (map: MaplibreMap, coords: LngLat[]) => {
+    const animateRouteDraw = (coords: LngLat[]) => {
+      stopRouteAnimation()
+      if (coords.length < 2) {
+        routeCoordsRef.current = coords
+        redrawPath()
+        return
+      }
+
+      routeCoordsRef.current = [coords[0]]
+      redrawPath()
+      const started = performance.now()
+
+      const tick = (now: number) => {
+        if (cancelled) return
+        const progress = easeOutCubic(Math.min(1, (now - started) / ROUTE_DRAW_MS))
+        routeCoordsRef.current = sliceRouteProgress(coords, progress)
+        redrawPath()
+        if (progress < 1) {
+          routeAnimRef.current = requestAnimationFrame(tick)
+        } else {
+          routeAnimRef.current = 0
+          routeCoordsRef.current = coords
+          redrawPath()
+        }
+      }
+
+      routeAnimRef.current = requestAnimationFrame(tick)
+    }
+
+    const fitPlaces = (map: MaplibreMap, coords: LngLat[], animated: boolean) => {
+      const duration = animated ? CAMERA_DURATION_MS : 0
       if (coords.length === 0) {
-        map.jumpTo({ center: DEFAULT_CENTER, zoom: 11 })
+        map.easeTo({ center: DEFAULT_CENTER, zoom: 11, duration })
         return
       }
       if (coords.length === 1) {
-        map.jumpTo({ center: coords[0], zoom: 14 })
+        map.easeTo({ center: coords[0], zoom: 14, duration })
         return
       }
       const bounds = new LngLatBounds(coords[0], coords[0])
@@ -181,7 +245,8 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
       map.fitBounds(bounds, {
         padding: { top: 64, bottom: 40, left: 48, right: 48 },
         maxZoom: 13.5,
-        duration: 0,
+        duration,
+        essential: true,
       })
     }
 
@@ -203,8 +268,8 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
       )
 
       forceMapLayout(map)
-      fitPlaces(map, coords)
-      setRouteCoords(coords)
+      fitPlaces(map, coords, true)
+      setRouteCoords(coords.length >= 2 ? [coords[0]] : coords)
 
       if (coords.length < 2) return
 
@@ -220,10 +285,12 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
             legModesRef.current.map((mode) => mode ?? '').join('|'),
           ].join('::')
           if (currentKey !== requestKey) return
-          setRouteCoords(road)
+          animateRouteDraw(road)
         })
         .catch((error) => {
           if (error instanceof DOMException && error.name === 'AbortError') return
+          if (cancelled || controller.signal.aborted) return
+          animateRouteDraw(coords)
         })
     }
 
@@ -316,6 +383,7 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
       timers.forEach((id) => window.clearTimeout(id))
       cleanupFns.forEach((fn) => fn())
       routeAbortRef.current?.abort()
+      if (routeAnimRef.current) cancelAnimationFrame(routeAnimRef.current)
       renderPlacesRef.current = null
       markersRef.current.forEach((marker) => marker.remove())
       markersRef.current = []
