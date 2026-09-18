@@ -22,15 +22,24 @@ export function PreferencesPage() {
         </Button>
       }
     >
-      <Section label="Интересы">
+      <Section
+        label="Интересы"
+        hint="Что вам ближе: музеи, еда, прогулки — отметьте всё, что важно."
+      >
         <InterestChips value={draft.interests} onToggle={toggleInterest} />
       </Section>
 
-      <Section label="Темп поездки">
+      <Section
+        label="Темп поездки"
+        hint="Спокойный — меньше дел в день, активный — насыщенный график."
+      >
         <PaceSegment value={draft.pace} onChange={setPace} />
       </Section>
 
-      <Section label="Дополнительно">
+      <Section
+        label="Дополнительно"
+        hint="Можем подобрать варианты жилья рядом с маршрутом."
+      >
         <OptionCard
           title="Подобрать жилье"
           description="Рекомендации отелей от ИИ"

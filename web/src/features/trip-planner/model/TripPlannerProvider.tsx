@@ -6,16 +6,33 @@ import {
 } from 'react'
 import { TripPlannerContext } from './context'
 import { DEFAULT_TRIP_DRAFT, MOCK_ROUTE, MOCK_TRIPS } from './mock'
-import type { InterestId, TripDraft, TripPace } from './types'
+import { MAX_TRIP_BUDGET, type InterestId, type TripDraft, type TripPace } from './types'
 
 const INITIAL_FAVORITES = new Set(['hermitage', 'kazanKremlin', 'olympicPark'])
+
+function clampDraft(patch: Partial<TripDraft>, prev: TripDraft): TripDraft {
+  const next: TripDraft = { ...prev, ...patch }
+
+  if (typeof patch.budget === 'number') {
+    next.budget = Math.min(MAX_TRIP_BUDGET, Math.max(0, Math.floor(patch.budget)))
+  }
+
+  if (patch.startDate && next.startDate > next.endDate) {
+    next.endDate = next.startDate
+  }
+  if (patch.endDate && next.endDate < next.startDate) {
+    next.startDate = next.endDate
+  }
+
+  return next
+}
 
 export function TripPlannerProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<TripDraft>(DEFAULT_TRIP_DRAFT)
   const [favorites, setFavorites] = useState<Set<string>>(() => new Set(INITIAL_FAVORITES))
 
   const updateDraft = useCallback((patch: Partial<TripDraft>) => {
-    setDraft((prev) => ({ ...prev, ...patch }))
+    setDraft((prev) => clampDraft(patch, prev))
   }, [])
 
   const toggleInterest = useCallback((id: InterestId) => {
