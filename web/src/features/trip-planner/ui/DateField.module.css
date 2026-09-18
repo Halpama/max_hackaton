@@ -1,0 +1,73 @@
+.trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px 0 16px;
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  border-radius: var(--tp-radius-md);
+  background: var(--tp-surface);
+  box-shadow: var(--tp-shadow-sm);
+  text-align: left;
+  cursor: pointer;
+  color: var(--tp-text);
+  overflow: hidden;
+}
+
+.icon {
+  position: relative;
+  z-index: 0;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.copy {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  pointer-events: none;
+}
+
+.caption {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--tp-muted-2);
+}
+
+.value {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.native {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0.01;
+  cursor: pointer;
+  color-scheme: light;
+}
