@@ -1,10 +1,12 @@
 import { createContext } from 'react'
-import type { InterestId, RoutePlan, TripDraft, TripPace } from './types'
+import type { InterestId, Place, RoutePlan, TripDraft, TripPace, TripSummary } from './types'
 
 export interface TripPlannerContextValue {
   draft: TripDraft
   route: RoutePlan
+  trips: TripSummary[]
   favorites: Set<string>
+  favoritePlaces: Place[]
   updateDraft: (patch: Partial<TripDraft>) => void
   toggleInterest: (id: InterestId) => void
   setPace: (pace: TripPace) => void

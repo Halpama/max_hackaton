@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@maxhub/max-ui'
 import { ROUTES } from '@/shared/config'
 import {
   InterestChips,
   OptionCard,
   PaceSegment,
-  PrimaryButton,
   Screen,
   Section,
   useTripPlanner,
@@ -17,9 +17,9 @@ export function PreferencesPage() {
   return (
     <Screen
       footer={
-        <PrimaryButton onClick={() => navigate(ROUTES.loading)}>
+        <Button stretched size="large" onClick={() => navigate(ROUTES.loading)}>
           Построить маршрут
-        </PrimaryButton>
+        </Button>
       }
     >
       <Section label="Интересы">

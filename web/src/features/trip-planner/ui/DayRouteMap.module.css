@@ -1,0 +1,135 @@
+.wrap {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 220px;
+  border-radius: 18px;
+  background: #e8eef6;
+  box-shadow: var(--tp-shadow-sm);
+  border: 1px solid rgba(0, 122, 255, 0.08);
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.routeSvg {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.routeLine {
+  fill: none;
+  stroke: #007aff;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.92;
+  filter: drop-shadow(0 1px 2px rgba(0, 122, 255, 0.35));
+}
+
+.badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--tp-primary-deep);
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background: rgba(232, 238, 246, 0.72);
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(0, 122, 255, 0.2);
+  border-top-color: var(--tp-primary);
+  animation: spin 0.7s linear infinite;
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+  text-align: center;
+  background: linear-gradient(180deg, #dbe7f8 0%, #c5daf5 100%);
+}
+
+.fallbackTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tp-text, #1a1a1a);
+}
+
+.fallbackText {
+  margin: 0;
+  max-width: 240px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--tp-muted, #667085);
+}
+
+.pin {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--tp-primary, #007aff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--tp-font);
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(0, 122, 255, 0.35);
+  user-select: none;
+  pointer-events: none;
+}
+
+.wrap :global(.maplibregl-ctrl-attrib) {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.wrap :global(.maplibregl-canvas) {
+  outline: none;
+}
+
+.wrap :global(.maplibregl-marker) {
+  z-index: 2;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,5 +1,6 @@
 export const ROUTES = {
   home: '/',
+  newTrip: '/trips/new',
   preferences: '/preferences',
   loading: '/loading',
   route: '/route',
