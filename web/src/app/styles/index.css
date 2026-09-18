@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap');
+
+:root {
+  --tp-bg: #f2f3f7;
+  --tp-bg-accent: radial-gradient(120% 80% at 50% -10%, rgba(0, 122, 255, 0.12), transparent 55%);
+  --tp-surface: #ffffff;
+  --tp-text: #0b0d12;
+  --tp-muted: #6b7280;
+  --tp-muted-2: #9ca3af;
+  --tp-primary: #007aff;
+  --tp-primary-deep: #0062d1;
+  --tp-primary-soft: rgba(0, 122, 255, 0.12);
+  --tp-success: #22c55e;
+  --tp-track: #e9ebf2;
+  --tp-divider: rgba(11, 13, 18, 0.06);
+  --tp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --tp-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --tp-radius-sm: 12px;
+  --tp-radius-md: 14px;
+  --tp-radius-lg: 18px;
+  --tp-radius-pill: 999px;
+  --tp-font: 'Manrope', system-ui, -apple-system, sans-serif;
+  --tp-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--tp-font);
+  background: var(--tp-bg);
+  color: var(--tp-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

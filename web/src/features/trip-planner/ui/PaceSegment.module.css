@@ -1,0 +1,29 @@
+.track {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 3px;
+  height: 40px;
+  background: var(--tp-track);
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.item {
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tp-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.itemActive {
+  composes: item;
+  background: var(--tp-surface);
+  color: var(--tp-text);
+  box-shadow: var(--tp-shadow-sm);
+  font-weight: 700;
+}

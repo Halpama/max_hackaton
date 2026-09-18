@@ -1,0 +1,73 @@
+.orb {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+}
+
+.core {
+  position: relative;
+  z-index: 2;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(145deg, #4da3ff 0%, #007aff 55%, #0057c2 100%);
+  box-shadow:
+    0 12px 28px rgba(0, 122, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+.ring,
+.ringDelayed {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1.5px solid rgba(0, 122, 255, 0.28);
+  animation: pulse 2.4s ease-out infinite;
+}
+
+.ringDelayed {
+  animation-delay: 0.8s;
+}
+
+.sweep {
+  position: absolute;
+  inset: 8px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  border-top-color: rgba(0, 122, 255, 0.7);
+  border-right-color: rgba(0, 122, 255, 0.15);
+  animation: spin 1.4s linear infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.78);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
