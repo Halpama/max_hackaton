@@ -9,8 +9,10 @@ export function getWebApp(): MaxWebApp | undefined {
   return window.WebApp
 }
 
+/** True only inside the real MAX client (CDN stub also sets window.WebApp in browser). */
 export function isMaxWebApp(): boolean {
-  return Boolean(getWebApp())
+  const webApp = getWebApp()
+  return Boolean(webApp?.initData)
 }
 
 /** Signal that the mini-app UI is ready (hides client skeleton when supported). */

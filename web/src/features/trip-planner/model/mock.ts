@@ -1,4 +1,4 @@
-import type { InterestId, RoutePlan, TripDraft, TripPace } from './types'
+import type { InterestId, RoutePlan, TripDraft, TripPace, TripSummary } from './types'
 
 export const INTEREST_OPTIONS: Array<{ id: InterestId; label: string }> = [
   { id: 'sights', label: 'Достопримечательности' },
@@ -34,6 +34,33 @@ export const DEFAULT_TRIP_DRAFT: TripDraft = {
   findHousing: false,
 }
 
+export const MOCK_TRIPS: TripSummary[] = [
+  {
+    id: 'spb',
+    city: 'Санкт-Петербург',
+    dateLabel: '15–17 сент',
+    travelersLabel: '2 чел',
+    budgetLabel: '~45 000 ₽',
+    status: 'ready',
+  },
+  {
+    id: 'kazan',
+    city: 'Казань',
+    dateLabel: '3–5 окт',
+    travelersLabel: '1 чел',
+    budgetLabel: '~28 000 ₽',
+    status: 'draft',
+  },
+  {
+    id: 'sochi',
+    city: 'Сочи',
+    dateLabel: '12–16 ноя',
+    travelersLabel: '3 чел',
+    budgetLabel: '~62 000 ₽',
+    status: 'ready',
+  },
+]
+
 export const MOCK_ROUTE: RoutePlan = {
   city: 'Санкт-Петербург',
   dateLabel: '15–17 сентября',
@@ -45,6 +72,7 @@ export const MOCK_ROUTE: RoutePlan = {
       title: 'Эрмитаж',
       category: 'Музей изобразительного и декоративно-прикладного искусства',
       categoryKind: 'museum',
+      city: 'Санкт-Петербург',
       priceLabel: '800 ₽',
       priceValue: 800,
       durationLabel: '2 часа',
@@ -56,12 +84,14 @@ export const MOCK_ROUTE: RoutePlan = {
         'Один из крупнейших и наиболее значимых художественных и культурно-исторических музеев в мире. Посещение обязательно начинается с парадных залов Зимнего дворца.',
       imageUrl:
         'https://images.unsplash.com/photo-1576422498609-459417ced4b8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+      coordinates: [30.31456, 59.93984],
     },
     palaceSquare: {
       id: 'palaceSquare',
       title: 'Дворцовая площадь',
       category: 'Локация',
       categoryKind: 'location',
+      city: 'Санкт-Петербург',
       priceLabel: 'Бесплатно',
       durationLabel: '45 мин',
       timeRange: '11:30 – 12:15',
@@ -72,12 +102,14 @@ export const MOCK_ROUTE: RoutePlan = {
         'Главная площадь Петербурга и сердце имперского города. Отсюда удобно начать прогулку к Неве и Адмиралтейству.',
       imageUrl:
         'https://images.unsplash.com/photo-1556610961-2fecc5937175?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+      coordinates: [30.31413, 59.93863],
     },
     pyshechnaya: {
       id: 'pyshechnaya',
       title: 'Легендарная Пышечная',
       category: 'Гастрономия',
       categoryKind: 'food',
+      city: 'Санкт-Петербург',
       priceLabel: '~500 ₽',
       priceValue: 500,
       durationLabel: '1 час',
@@ -89,6 +121,41 @@ export const MOCK_ROUTE: RoutePlan = {
         'Классическая петербургская пышечная с горячими пончиками и кофе. Короткая, но обязательная гастро-остановка.',
       imageUrl:
         'https://images.unsplash.com/photo-1551024601-bec78aea704b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+      coordinates: [30.32295, 59.93555],
+    },
+    kazanKremlin: {
+      id: 'kazanKremlin',
+      title: 'Казанский Кремль',
+      category: 'Достопримечательность',
+      categoryKind: 'location',
+      city: 'Казань',
+      priceLabel: 'Бесплатно',
+      durationLabel: '2 часа',
+      timeRange: '10:00 – 12:00',
+      rating: 4.8,
+      reviewsLabel: '9k отзывов',
+      address: 'Кремлёвская ул.',
+      description: 'Исторический комплекс и визитная карточка Казани.',
+      imageUrl:
+        'https://images.unsplash.com/photo-1596484552834-6a58f850ce0c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+      coordinates: [49.10599, 55.79891],
+    },
+    olympicPark: {
+      id: 'olympicPark',
+      title: 'Олимпийский парк',
+      category: 'Локация',
+      categoryKind: 'location',
+      city: 'Сочи',
+      priceLabel: 'Бесплатно',
+      durationLabel: '3 часа',
+      timeRange: '11:00 – 14:00',
+      rating: 4.6,
+      reviewsLabel: '5k отзывов',
+      address: 'Олимпийский пр.',
+      description: 'Прибрежный кластер стадионов и прогулочных зон.',
+      imageUrl:
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+      coordinates: [39.95578, 43.40205],
     },
   },
   days: [

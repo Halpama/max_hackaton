@@ -12,4 +12,8 @@ export default defineConfig({
       '@': path.resolve(rootDir, 'src'),
     },
   },
+  optimizeDeps: {
+    // MapLibre v6 worker breaks under Vite dep prebundling
+    exclude: ['maplibre-gl'],
+  },
 })
