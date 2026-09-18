@@ -7,9 +7,9 @@ export function NotFoundPage() {
   return (
     <PageLayout centered>
       <Typography.Title>Страница не найдена</Typography.Title>
-      <Typography.Body>Проверьте адрес или вернитесь на главную</Typography.Body>
+      <Typography.Body>Проверьте адрес или вернитесь к поездке</Typography.Body>
       <Button stretched asChild>
-        <Link to={ROUTES.home}>На главную</Link>
+        <Link to={ROUTES.home}>К новой поездке</Link>
       </Button>
     </PageLayout>
   )
