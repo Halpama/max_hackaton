@@ -1,4 +1,10 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import {
+  useId,
+  useState,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react'
 import styles from './trip.module.css'
 
 export function SectionLabel({ children }: { children: ReactNode }) {
@@ -7,14 +13,39 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 
 export function Section({
   label,
+  hint,
   children,
 }: {
   label: string
+  hint?: string
   children: ReactNode
 }) {
+  const hintId = useId()
+  const [hintOpen, setHintOpen] = useState(false)
+
   return (
     <section className={styles.section}>
-      <SectionLabel>{label}</SectionLabel>
+      <div className={styles.labelRow}>
+        <SectionLabel>{label}</SectionLabel>
+        {hint ? (
+          <button
+            type="button"
+            className={styles.hintBtn}
+            aria-label="Подсказка"
+            aria-expanded={hintOpen}
+            aria-controls={hintId}
+            title={hint}
+            onClick={() => setHintOpen((open) => !open)}
+          >
+            ?
+          </button>
+        ) : null}
+      </div>
+      {hint && hintOpen ? (
+        <p id={hintId} className={styles.hintText} role="note">
+          {hint}
+        </p>
+      ) : null}
       {children}
     </section>
   )

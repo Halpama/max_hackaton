@@ -5,6 +5,7 @@ import {
   DateField,
   formatBudget,
   formatTravelers,
+  MAX_TRIP_BUDGET,
   PersonIcon,
   RubleIcon,
   Screen,
@@ -30,7 +31,10 @@ export function NewTripPage() {
     >
       <h1 className={tripStyles.title}>Новая поездка</h1>
 
-      <Section label="Куда едем?">
+      <Section
+        label="Куда едем?"
+        hint="Город или регион, куда хотите поехать."
+      >
         <TextField
           icon={<SearchIcon />}
           value={draft.destination}
@@ -39,22 +43,30 @@ export function NewTripPage() {
         />
       </Section>
 
-      <div className={tripStyles.grid2}>
-        <DateField
-          label="Начало"
-          value={draft.startDate}
-          max={draft.endDate}
-          onChange={(startDate) => updateDraft({ startDate })}
-        />
-        <DateField
-          label="Конец"
-          value={draft.endDate}
-          min={draft.startDate}
-          onChange={(endDate) => updateDraft({ endDate })}
-        />
-      </div>
+      <Section
+        label="Даты"
+        hint="Выберите период поездки: день окончания не раньше дня начала."
+      >
+        <div className={tripStyles.grid2}>
+          <DateField
+            label="Начало"
+            value={draft.startDate}
+            max={draft.endDate}
+            onChange={(startDate) => updateDraft({ startDate })}
+          />
+          <DateField
+            label="Конец"
+            value={draft.endDate}
+            min={draft.startDate}
+            onChange={(endDate) => updateDraft({ endDate })}
+          />
+        </div>
+      </Section>
 
-      <Section label="Бюджет">
+      <Section
+        label="Бюджет"
+        hint={`Сколько планируете потратить на всю поездку. До ${formatBudget(MAX_TRIP_BUDGET)} ₽.`}
+      >
         <TextField
           icon={<RubleIcon />}
           inputMode="numeric"
@@ -66,7 +78,10 @@ export function NewTripPage() {
         />
       </Section>
 
-      <Section label="Путешественники">
+      <Section
+        label="Путешественники"
+        hint="Сколько человек едет вместе."
+      >
         <Stepper
           icon={<PersonIcon />}
           label={formatTravelers(draft.travelers)}

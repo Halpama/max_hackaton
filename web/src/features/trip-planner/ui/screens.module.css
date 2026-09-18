@@ -16,41 +16,61 @@
 .city {
   margin: 0;
   font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
 }
 
 .badge {
   display: inline-flex;
-  align-items: baseline;
-  gap: 2px;
-  padding: 7px 12px;
-  border-radius: 999px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 14px;
   background: var(--tp-primary-soft);
   color: var(--tp-primary-deep);
   font-family: var(--tp-font);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
+.badgeWarn {
+  composes: badge;
+  background: rgba(247, 103, 7, 0.12);
+  color: #d9480f;
+}
+
+.badgeStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
 .badgePrefix {
-  opacity: 0.7;
+  font-size: 12px;
   font-weight: 500;
+  letter-spacing: -0.01em;
+  opacity: 0.78;
+  text-transform: none;
+}
+
+.badgeAmount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
 }
 
 .badgeValue {
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .badgeCurrency {
-  margin-left: 3px;
-  font-weight: 500;
-  opacity: 0.85;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.8;
 }
 
 .meta {
@@ -60,8 +80,9 @@
   flex-wrap: wrap;
   gap: 10px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--tp-muted);
+  letter-spacing: -0.01em;
 }
 
 .metaItem {
@@ -75,6 +96,10 @@
   height: 3px;
   border-radius: 999px;
   background: #c4c8d4;
+}
+
+.mainTabs {
+  padding: 4px 16px 0;
 }
 
 .mapWrap {

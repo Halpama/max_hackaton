@@ -52,11 +52,11 @@ export function SparklesIcon(props: IconProps) {
   return (
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" {...props}>
       <path
-        d="M12 2.8l1.35 4.7L18.1 9l-4.75 1.5L12 15.2l-1.35-4.7L5.9 9l4.75-1.5L12 2.8z"
+        d="M12 2.8l1.85 6.35L20.2 11l-6.35 1.85L12 19.2l-1.85-6.35L3.8 11l6.35-1.85L12 2.8z"
         fill="currentColor"
       />
       <path
-        d="M18.2 13.2l.75 2.5 2.55.75-2.55.75-.75 2.5-.75-2.5-2.55-.75 2.55-.75.75-2.5z"
+        d="M19.1 3.6l.58 1.95 1.95.58-1.95.58-.58 1.95-.58-1.95-1.95-.58 1.95-.58.58-1.95z"
         fill="currentColor"
       />
     </svg>
@@ -172,6 +172,83 @@ export function MapIcon(props: IconProps) {
         strokeLinejoin="round"
       />
       <path d="M9 4.5v13M15 6.5v13" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  )
+}
+
+export function BagIcon(props: IconProps) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        d="M6.5 9.5h11l-.7 9.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6.5 9.5z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 9.5V7.8A3 3 0 0 1 12 4.8 3 3 0 0 1 15 7.8v1.7"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+export function TextBlockIcon(props: IconProps) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        d="M5 7h14M5 12h10M5 17h12"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+export function BulletListIcon(props: IconProps) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" {...props}>
+      <circle cx="6" cy="7" r="1.4" fill="currentColor" />
+      <circle cx="6" cy="12" r="1.4" fill="currentColor" />
+      <circle cx="6" cy="17" r="1.4" fill="currentColor" />
+      <path
+        d="M10.5 7h8.5M10.5 12h8.5M10.5 17h8.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+export function ChecklistIcon(props: IconProps) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" {...props}>
+      <rect
+        x="4"
+        y="5.5"
+        width="5"
+        height="5"
+        rx="1.2"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M5.2 8l1.3 1.3L9.2 6.6"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12.5 8h7.5M4.5 16.5h15"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }

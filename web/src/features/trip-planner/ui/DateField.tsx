@@ -10,6 +10,13 @@ interface DateFieldProps {
   onChange: (value: string) => void
 }
 
+function clampDate(value: string, min?: string, max?: string) {
+  let next = value
+  if (min && next < min) next = min
+  if (max && next > max) next = max
+  return next
+}
+
 export function DateField({ label, value, min, max, onChange }: DateFieldProps) {
   return (
     <label className={styles.trigger}>
@@ -27,7 +34,17 @@ export function DateField({ label, value, min, max, onChange }: DateFieldProps) 
         min={min}
         max={max}
         aria-label={label}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          const raw = event.target.value
+          if (!raw) return
+          onChange(clampDate(raw, min, max))
+        }}
+        onBlur={(event) => {
+          const raw = event.target.value
+          if (!raw) return
+          const clamped = clampDate(raw, min, max)
+          if (clamped !== raw) onChange(clamped)
+        }}
         onFocus={(event) => {
           const input = event.currentTarget
           if (typeof input.showPicker === 'function') {
