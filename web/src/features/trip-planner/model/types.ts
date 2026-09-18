@@ -31,6 +31,7 @@ export interface Place {
   title: string
   category: string
   categoryKind: 'museum' | 'location' | 'food' | 'walk'
+  city: string
   priceLabel: string
   priceValue?: number
   durationLabel: string
@@ -40,6 +41,19 @@ export interface Place {
   address: string
   description: string
   imageUrl: string
+  /** [longitude, latitude] */
+  coordinates: [number, number]
+}
+
+export type TripStatus = 'ready' | 'draft'
+
+export interface TripSummary {
+  id: string
+  city: string
+  dateLabel: string
+  travelersLabel: string
+  budgetLabel: string
+  status: TripStatus
 }
 
 export interface Activity {

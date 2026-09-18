@@ -10,6 +10,7 @@ import {
   TransitHint,
   useTripPlanner,
 } from '@/features/trip-planner'
+import { DayRouteMap } from '@/features/trip-planner/ui/DayRouteMap'
 import styles from '@/features/trip-planner/ui/screens.module.css'
 
 export function ReadyRoutePage() {
@@ -20,6 +21,14 @@ export function ReadyRoutePage() {
   const day = useMemo(
     () => route.days.find((item) => item.id === activeDayId) ?? route.days[0],
     [activeDayId, route.days],
+  )
+
+  const dayPlaces = useMemo(
+    () =>
+      (day?.activities ?? [])
+        .map((activity) => route.places[activity.placeId])
+        .filter((place): place is NonNullable<typeof place> => Boolean(place)),
+    [day, route.places],
   )
 
   return (
@@ -42,6 +51,13 @@ export function ReadyRoutePage() {
         </p>
       </div>
 
+      <div className={styles.mapWrap}>
+        <DayRouteMap
+          places={dayPlaces}
+          legModes={(day?.transits ?? []).map((leg) => leg?.mode)}
+        />
+      </div>
+
       <div style={{ paddingTop: 14, paddingBottom: 4 }}>
         <DayTabs
           days={route.days.map(({ id, label }) => ({ id, label }))}
@@ -50,16 +66,32 @@ export function ReadyRoutePage() {
         />
       </div>
 
-      <div className={styles.list}>
-        {day?.activities.map((activity, index) => (
-          <div key={activity.id} className={styles.listItem}>
-            <ActivityCard
-              activity={activity}
-              onClick={() => navigate(ROUTES.place(activity.placeId))}
-            />
-            {day.transits[index] ? <TransitHint leg={day.transits[index]!} /> : null}
-          </div>
-        ))}
+      <div className={styles.list} key={day?.id ?? 'day'}>
+        {day?.activities.map((activity, index) => {
+          const fromPlace = route.places[activity.placeId]
+          const toPlace = route.places[day.activities[index + 1]?.placeId]
+          const transit = day.transits[index]
+
+          return (
+            <div
+              key={activity.id}
+              className={styles.listItem}
+              style={{ animationDelay: `${index * 90}ms` }}
+            >
+              <ActivityCard
+                activity={activity}
+                onClick={() => navigate(ROUTES.place(activity.placeId))}
+              />
+              {transit && fromPlace && toPlace ? (
+                <TransitHint
+                  leg={transit}
+                  from={fromPlace.coordinates}
+                  to={toPlace.coordinates}
+                />
+              ) : null}
+            </div>
+          )
+        })}
       </div>
     </Screen>
   )

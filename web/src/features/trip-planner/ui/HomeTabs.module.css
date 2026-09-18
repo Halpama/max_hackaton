@@ -1,0 +1,25 @@
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--tp-track);
+  border-radius: 12px;
+}
+
+.tab {
+  height: 36px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--tp-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabActive {
+  composes: tab;
+  background: var(--tp-primary);
+  color: #fff;
+}

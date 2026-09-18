@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@maxhub/max-ui'
 import { ROUTES } from '@/shared/config'
 import {
   DateField,
   formatBudget,
   formatTravelers,
   PersonIcon,
-  PrimaryButton,
   RubleIcon,
   Screen,
   SearchIcon,
@@ -23,9 +23,9 @@ export function NewTripPage() {
   return (
     <Screen
       footer={
-        <PrimaryButton onClick={() => navigate(ROUTES.preferences)}>
+        <Button stretched size="large" onClick={() => navigate(ROUTES.preferences)}>
           Далее
-        </PrimaryButton>
+        </Button>
       }
     >
       <h1 className={tripStyles.title}>Новая поездка</h1>
