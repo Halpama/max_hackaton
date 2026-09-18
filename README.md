@@ -28,4 +28,4 @@ npm run dev
 4. `/route` — готовый план по дням  
 5. `/places/:placeId` — карточка места  
 
-Состояние черновика держится в `TripPlannerProvider` без бэкенда.
+Состояние черновика держится в `TripPlannerProvider` без бэкенда
