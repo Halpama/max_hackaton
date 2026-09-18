@@ -9,8 +9,36 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.home,
         lazy: async () => {
-          const { HomePage } = await import('@/pages/home')
-          return { Component: HomePage }
+          const { NewTripPage } = await import('@/pages/new-trip')
+          return { Component: NewTripPage }
+        },
+      },
+      {
+        path: ROUTES.preferences,
+        lazy: async () => {
+          const { PreferencesPage } = await import('@/pages/preferences')
+          return { Component: PreferencesPage }
+        },
+      },
+      {
+        path: ROUTES.loading,
+        lazy: async () => {
+          const { RouteLoadingPage } = await import('@/pages/route-loading')
+          return { Component: RouteLoadingPage }
+        },
+      },
+      {
+        path: ROUTES.route,
+        lazy: async () => {
+          const { ReadyRoutePage } = await import('@/pages/ready-route')
+          return { Component: ReadyRoutePage }
+        },
+      },
+      {
+        path: ROUTES.placePattern,
+        lazy: async () => {
+          const { LocationDetailPage } = await import('@/pages/location-detail')
+          return { Component: LocationDetailPage }
         },
       },
       {

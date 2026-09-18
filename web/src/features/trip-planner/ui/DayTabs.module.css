@@ -1,0 +1,26 @@
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px;
+  overflow-x: auto;
+}
+
+.tab {
+  border: 1px solid transparent;
+  border-radius: var(--tp-radius-pill);
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--tp-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tabActive {
+  composes: tab;
+  background: var(--tp-primary);
+  color: #fff;
+  box-shadow: none;
+}

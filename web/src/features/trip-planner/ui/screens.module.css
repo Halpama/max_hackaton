@@ -1,0 +1,142 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 16px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f8fc 100%);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+  border-radius: 0 0 22px 22px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.city {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary-deep);
+  font-family: var(--tp-font);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.badgePrefix {
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+.badgeValue {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.badgeCurrency {
+  margin-left: 3px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.meta {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tp-muted);
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metaDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: #c4c8d4;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 16px;
+}
+
+.listItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.loadingCenter {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  text-align: center;
+  padding: 32px 16px 48px;
+}
+
+.loadingCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 300px;
+}
+
+.loadingTitle {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.loadingSub {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--tp-muted);
+  font-weight: 500;
+}
+
+.progressWrap {
+  width: 100%;
+  max-width: 320px;
+  animation: rise 0.5s ease both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
