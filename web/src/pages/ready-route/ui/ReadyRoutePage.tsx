@@ -1,20 +1,22 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ROUTES } from '@/shared/config'
 import {
   ActivityCard,
-  BagIcon,
   CalendarIcon,
+  CompassIcon,
   DayTabs,
-  MapIcon,
+  LoadingView,
   PersonIcon,
-  RubleIcon,
   Screen,
+  StatusView,
   TransitHint,
+  WarningIcon,
   useTripPlanner,
 } from '@/features/trip-planner'
 import { DayRouteMap } from '@/features/trip-planner/ui/DayRouteMap'
-import { RouteMainTabs, type RouteMainTab } from '@/features/trip-planner/ui/RouteMainTabs'
+import { DayWeatherBadge } from '@/features/trip-planner/ui/DayWeatherBadge'
+import { parseTripTab, placeNavState } from '@/features/trip-planner/ui/BottomNav'
 import { PackingPanel } from '@/features/trip-planner/ui/PackingPanel'
 import { BudgetPanel } from '@/features/trip-planner/ui/BudgetPanel'
 import {
@@ -25,14 +27,33 @@ import styles from '@/features/trip-planner/ui/screens.module.css'
 
 export function ReadyRoutePage() {
   const navigate = useNavigate()
-  const { route, draft } = useTripPlanner()
-  const [mainTab, setMainTab] = useState<RouteMainTab>('route')
-  const [activeDayId, setActiveDayId] = useState(route.days[0]?.id ?? '')
+  const [searchParams] = useSearchParams()
+  const { route, routeState, routeError, activeTripId, openTrip, draft } = useTripPlanner()
 
-  const tripId = useMemo(
-    () => `${route.city}-${route.dateLabel}`.toLowerCase().replace(/\s+/g, '-'),
-    [route.city, route.dateLabel],
-  )
+  const requestedTripId = searchParams.get('tripId')
+  const mainTab = parseTripTab(searchParams.get('tab'))
+  const [activeDayId, setActiveDayId] = useState('')
+
+  // A link or reload can point at a different trip than the one in memory.
+  useEffect(() => {
+    if (requestedTripId && requestedTripId !== activeTripId) {
+      void openTrip(requestedTripId)
+    }
+  }, [requestedTripId, activeTripId, openTrip])
+
+  const day = useMemo(() => {
+    if (!route) return undefined
+    return route.days.find((item) => item.id === activeDayId) ?? route.days[0]
+  }, [activeDayId, route])
+
+  const dayPlaces = useMemo(() => {
+    if (!route || !day) return []
+    return day.activities
+      .map((activity) => route.places[activity.placeId])
+      .filter((place): place is NonNullable<typeof place> => Boolean(place))
+  }, [day, route])
+
+  const tripId = activeTripId ?? ''
   const plannedBudget = draft.budget > 0 ? draft.budget : 45_000
 
   const {
@@ -48,18 +69,28 @@ export function ReadyRoutePage() {
     todayIso,
   } = useTripLocalState(tripId, plannedBudget)
 
-  const day = useMemo(
-    () => route.days.find((item) => item.id === activeDayId) ?? route.days[0],
-    [activeDayId, route.days],
-  )
+  if (!route) {
+    if (routeState === 'loading' || routeState === 'idle') {
+      return (
+        <Screen>
+          <LoadingView title="Загружаем маршрут…" />
+        </Screen>
+      )
+    }
 
-  const dayPlaces = useMemo(
-    () =>
-      (day?.activities ?? [])
-        .map((activity) => route.places[activity.placeId])
-        .filter((place): place is NonNullable<typeof place> => Boolean(place)),
-    [day, route.places],
-  )
+    return (
+      <Screen>
+        <StatusView
+          tone="error"
+          icon={<WarningIcon />}
+          title="Маршрут недоступен"
+          text={routeError ?? 'Создайте новую поездку, чтобы увидеть маршрут.'}
+          actionLabel="Новая поездка"
+          onAction={() => navigate(ROUTES.newTrip)}
+        />
+      </Screen>
+    )
+  }
 
   return (
     <Screen flush>
@@ -81,80 +112,91 @@ export function ReadyRoutePage() {
         </p>
       </div>
 
-      <div className={styles.mainTabs}>
-        <RouteMainTabs
-          value={mainTab}
-          onChange={setMainTab}
-          tabs={[
-            { id: 'route', label: 'Маршрут', icon: <MapIcon /> },
-            { id: 'packing', label: 'Сборы', icon: <BagIcon /> },
-            { id: 'budget', label: 'Бюджет', icon: <RubleIcon /> },
-          ]}
-        />
-      </div>
-
       {mainTab === 'route' ? (
-        <>
-          <div className={styles.mapWrap}>
-            <DayRouteMap
-              places={dayPlaces}
-              legModes={(day?.transits ?? []).map((leg) => leg?.mode)}
+        <div key="route" className={styles.panel}>
+          {day && day.activities.length > 0 ? (
+            <>
+              <div className={`${styles.mapWrap} ${styles.mapReveal}`}>
+                <DayRouteMap
+                  places={dayPlaces}
+                  legModes={(day.transits ?? []).map((leg) => leg?.mode)}
+                />
+              </div>
+
+              <div className={styles.dayControls}>
+                <DayTabs
+                  days={route.days.map(({ id, label }) => ({ id, label }))}
+                  activeId={day.id}
+                  onChange={setActiveDayId}
+                />
+                <DayWeatherBadge key={day.id} day={day} />
+              </div>
+
+              <div className={styles.list} key={day.id}>
+                {day.activities.map((activity, index) => {
+                  const fromPlace = route.places[activity.placeId]
+                  const toPlace = route.places[day.activities[index + 1]?.placeId]
+                  const transit = day.transits[index]
+
+                  return (
+                    <div
+                      key={activity.id}
+                      className={styles.listItem}
+                      style={{ animationDelay: `${index * 90}ms` }}
+                    >
+                      <ActivityCard
+                        activity={activity}
+                        categoryKind={fromPlace?.categoryKind}
+                        category={fromPlace?.category}
+                        onClick={() =>
+                          navigate(ROUTES.place(activity.placeId), {
+                            state: placeNavState('trip'),
+                          })
+                        }
+                      />
+                      {transit && fromPlace && toPlace ? (
+                        <TransitHint
+                          leg={transit}
+                          from={fromPlace.coordinates}
+                          to={toPlace.coordinates}
+                        />
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            <StatusView
+              icon={<CompassIcon />}
+              title="В этом дне пока пусто"
+              text="Попробуйте создать поездку заново с другими интересами."
+              actionLabel="Новая поездка"
+              onAction={() => navigate(ROUTES.newTrip)}
             />
-          </div>
-
-          <div style={{ paddingTop: 14, paddingBottom: 4 }}>
-            <DayTabs
-              days={route.days.map(({ id, label }) => ({ id, label }))}
-              activeId={day?.id ?? ''}
-              onChange={setActiveDayId}
-            />
-          </div>
-
-          <div className={styles.list} key={day?.id ?? 'day'}>
-            {day?.activities.map((activity, index) => {
-              const fromPlace = route.places[activity.placeId]
-              const toPlace = route.places[day.activities[index + 1]?.placeId]
-              const transit = day.transits[index]
-
-              return (
-                <div
-                  key={activity.id}
-                  className={styles.listItem}
-                  style={{ animationDelay: `${index * 90}ms` }}
-                >
-                  <ActivityCard
-                    activity={activity}
-                    onClick={() => navigate(ROUTES.place(activity.placeId))}
-                  />
-                  {transit && fromPlace && toPlace ? (
-                    <TransitHint
-                      leg={transit}
-                      from={fromPlace.coordinates}
-                      to={toPlace.coordinates}
-                    />
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        </>
+          )}
+        </div>
       ) : null}
 
       {mainTab === 'packing' ? (
-        <PackingPanel blocks={packing} onChange={updatePacking} createId={createId} />
+        <div key="packing" className={styles.panel}>
+          <PackingPanel blocks={packing} onChange={updatePacking} createId={createId} />
+        </div>
       ) : null}
 
       {mainTab === 'budget' ? (
-        <BudgetPanel
-          plannedBudget={plannedBudget}
-          remaining={remaining}
-          spent={spent}
-          toppedUp={toppedUp}
-          ledger={ledger}
-          todayIso={todayIso}
-          onAdd={addLedgerEntry}
-          onRemove={removeLedgerEntry}
-        />
+        <div key="budget" className={styles.panel}>
+          <BudgetPanel
+            plannedBudget={plannedBudget}
+            remaining={remaining}
+            spent={spent}
+            toppedUp={toppedUp}
+            ledger={ledger}
+            todayIso={todayIso}
+            onAdd={addLedgerEntry}
+            onRemove={removeLedgerEntry}
+          />
+        </div>
       ) : null}
     </Screen>
   )

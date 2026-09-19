@@ -1,0 +1,385 @@
+.root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  padding: 0 14px calc(12px + var(--tp-safe-bottom));
+  pointer-events: none;
+  animation: navRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.shell {
+  --shell-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 400px;
+  min-height: 68px;
+  padding: 6px;
+  border-radius: 28px;
+  /* Glassmorphism — light frost, keep map/cards readable behind */
+  background:
+    linear-gradient(
+      165deg,
+      rgba(255, 255, 255, 0.72) 0%,
+      rgba(255, 255, 255, 0.58) 48%,
+      rgba(255, 255, 255, 0.66) 100%
+    );
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 12px 40px rgba(15, 23, 42, 0.1),
+    0 2px 8px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18);
+  /* Safari needs -webkit- first; unprefixed for Chrome/Firefox/Edge */
+  -webkit-backdrop-filter: blur(12px) saturate(1.35);
+  backdrop-filter: blur(12px) saturate(1.35);
+  animation: shellIn 0.45s var(--shell-ease) both;
+  /* FAB (+ ) sticks out above the bar — must not clip */
+  overflow: visible;
+  transition:
+    max-width 0.5s var(--shell-ease),
+    min-height 0.5s var(--shell-ease),
+    padding 0.42s var(--shell-ease),
+    border-radius 0.5s var(--shell-ease),
+    background 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
+}
+
+.shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0) 42%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Place detail: shrink to a round close control. */
+.shell[data-mode='close'] {
+  max-width: 56px;
+  min-height: 56px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  overflow: visible;
+  /* Same timing as expand so both directions feel matched */
+  transition:
+    max-width 0.5s var(--shell-ease),
+    min-height 0.5s var(--shell-ease),
+    padding 0.42s var(--shell-ease),
+    border-radius 0.5s var(--shell-ease),
+    background 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.list {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: stretch;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  /* Slight delay so the shell can start opening before tabs pop in */
+  animation: listIn 0.48s var(--shell-ease, cubic-bezier(0.22, 1, 0.36, 1)) 0.06s both;
+}
+
+.pill,
+.pillHidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 22px;
+  background: rgba(0, 122, 255, 0.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 122, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.pillHidden {
+  opacity: 0;
+}
+
+.item,
+.itemActive {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 6px;
+  border: none;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--tp-muted);
+  cursor: pointer;
+  font-family: var(--tp-font);
+  animation: itemIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: color 0.2s ease, transform 0.18s ease;
+}
+
+.item:active,
+.itemActive:active {
+  transform: scale(0.95);
+}
+
+.itemActive {
+  color: var(--tp-primary-deep);
+}
+
+.itemActive .icon {
+  animation: iconPop 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.emphasis {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  animation: itemIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-top: -22px;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(160deg, #3b95ff 0%, var(--tp-primary) 55%, #0062d1 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 10px 24px rgba(0, 122, 255, 0.38),
+    0 0 0 5px rgba(255, 255, 255, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease;
+}
+
+.emphasis:hover .fab {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow:
+    0 14px 28px rgba(0, 122, 255, 0.42),
+    0 0 0 5px rgba(255, 255, 255, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.emphasis:active .fab {
+  transform: scale(0.94);
+}
+
+.fab svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.4;
+}
+
+.icon {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.itemActive .label {
+  font-weight: 700;
+}
+
+/* ---- close circle only ---- */
+
+.closeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(160deg, #3b95ff 0%, var(--tp-primary) 55%, #0062d1 100%);
+  box-shadow:
+    0 10px 24px rgba(0, 122, 255, 0.38),
+    0 0 0 5px rgba(255, 255, 255, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  animation: closeIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+}
+
+.closeBtn:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 14px 28px rgba(0, 122, 255, 0.42),
+    0 0 0 5px rgba(255, 255, 255, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.closeBtn:active {
+  transform: scale(0.94);
+}
+
+.closeBtn svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+@keyframes navRise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shellIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes listIn {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes closeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes itemIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes iconPop {
+  0% {
+    transform: scale(0.85);
+  }
+  55% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .shell,
+  .item,
+  .itemActive,
+  .emphasis,
+  .pill,
+  .itemActive .icon,
+  .fab,
+  .list,
+  .closeBtn {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* No backdrop-filter (old Firefox/IE, some WebViews): solid frosted panel */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .shell {
+    background: rgba(255, 255, 255, 0.94);
+  }
+}

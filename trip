@@ -1,0 +1,548 @@
+#!/usr/bin/env bash
+# Trip Planner — jury-friendly launcher (macOS / Linux / Git Bash / WSL).
+# On Windows use trip.cmd instead.
+# Usage: ./trip <command>
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+COMPOSE=(docker compose)
+ENV_FILE="$ROOT/backend/.env"
+ENV_EXAMPLE="$ROOT/backend/.env.example"
+API_URL="${TRIP_API_URL:-http://localhost:8000}"
+WEB_URL="${TRIP_WEB_URL:-http://localhost:3000}"
+
+# ---- colors (disabled when not a TTY) ----
+if [[ -t 1 ]]; then
+  C_RESET=$'\033[0m'
+  C_BOLD=$'\033[1m'
+  C_DIM=$'\033[2m'
+  C_GREEN=$'\033[32m'
+  C_YELLOW=$'\033[33m'
+  C_RED=$'\033[31m'
+  C_CYAN=$'\033[36m'
+  C_BLUE=$'\033[34m'
+else
+  C_RESET= C_BOLD= C_DIM= C_GREEN= C_YELLOW= C_RED= C_CYAN= C_BLUE=
+fi
+
+ok()   { printf '%s●%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+warn() { printf '%s●%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
+bad()  { printf '%s●%s %s\n' "$C_RED" "$C_RESET" "$*"; }
+info() { printf '%s→%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+hdr()  { printf '\n%s%s%s\n' "$C_BOLD" "$*" "$C_RESET"; }
+
+need_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    bad "Docker не найден. Установи Docker Desktop и повтори."
+    exit 1
+  fi
+  if ! docker info >/dev/null 2>&1; then
+    bad "Docker daemon не запущен. Открой Docker Desktop."
+    exit 1
+  fi
+}
+
+ensure_env() {
+  if [[ ! -f "$ENV_FILE" ]]; then
+    if [[ -f "$ENV_EXAMPLE" ]]; then
+      cp "$ENV_EXAMPLE" "$ENV_FILE"
+      warn "Создал backend/.env из .env.example — впиши ключи и перезапусти."
+    else
+      bad "Нет backend/.env и backend/.env.example"
+      exit 1
+    fi
+  fi
+}
+
+# Read KEY=value from .env without sourcing (safe for secrets).
+env_get() {
+  local key="$1"
+  [[ -f "$ENV_FILE" ]] || { echo ""; return; }
+  # shellcheck disable=SC2002
+  local line
+  line="$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -1 || true)"
+  if [[ -z "$line" ]]; then
+    echo ""
+    return
+  fi
+  echo "${line#*=}" | sed -e 's/^["'\'']//' -e 's/["'\'']$//'
+}
+
+env_set() {
+  # env_set KEY VALUE — upsert into backend/.env
+  local key="$1" value="$2"
+  ensure_env
+  if grep -qE "^${key}=" "$ENV_FILE" 2>/dev/null; then
+    # portable in-place edit
+    if [[ "$(uname)" == "Darwin" ]]; then
+      sed -i '' -E "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+    else
+      sed -i -E "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+    fi
+  else
+    printf '\n%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+  fi
+}
+
+is_truthy() {
+  case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+flag() {
+  # flag "Label" present_bool [extra]
+  local label="$1" present="$2" extra="${3:-}"
+  if [[ "$present" == "1" || "$present" == "true" ]]; then
+    ok "$label${extra:+ — $extra}"
+  else
+    bad "$label${extra:+ — $extra}"
+  fi
+}
+
+soft_flag() {
+  local label="$1" present="$2" extra="${3:-}"
+  if [[ "$present" == "1" || "$present" == "true" ]]; then
+    ok "$label${extra:+ — $extra}"
+  else
+    warn "$label${extra:+ — $extra}"
+  fi
+}
+
+service_state() {
+  local name="$1"
+  local state
+  state="$("${COMPOSE[@]}" ps --format '{{.Service}} {{.State}} {{.Health}}' 2>/dev/null \
+    | awk -v s="$name" '$1==s {print $2, $3; exit}')"
+  if [[ -z "$state" ]]; then
+    echo "down"
+    return
+  fi
+  local running="${state%% *}"
+  local health="${state#* }"
+  if [[ "$running" != "running" ]]; then
+    echo "$running"
+    return
+  fi
+  if [[ "$health" == "healthy" ]]; then
+    echo "healthy"
+  elif [[ "$health" == "unhealthy" ]]; then
+    echo "unhealthy"
+  elif [[ "$health" == "starting" ]]; then
+    echo "starting"
+  else
+    echo "running"
+  fi
+}
+
+print_service() {
+  local name="$1" url="${2:-}"
+  local st
+  st="$(service_state "$name")"
+  case "$st" in
+    healthy) ok "$name  healthy${url:+  $url}" ;;
+    running) ok "$name  running${url:+  $url}" ;;
+    starting) warn "$name  starting…" ;;
+    unhealthy) bad "$name  unhealthy" ;;
+    down|"") bad "$name  down" ;;
+    *) warn "$name  $st" ;;
+  esac
+}
+
+curl_json() {
+  local url="$1"
+  curl -fsS --max-time 3 "$url" 2>/dev/null || true
+}
+
+cmd_help() {
+  cat <<EOF
+${C_BOLD}Trip Planner${C_RESET} — быстрый запуск для жюри и демо
+
+${C_BOLD}Использование${C_RESET}
+  ./trip <команда>
+
+${C_BOLD}Команды${C_RESET}
+  ${C_CYAN}up${C_RESET}          поднять стек (postgres, redis, api, web) и показать статус
+  ${C_CYAN}down${C_RESET}        остановить и убрать контейнеры
+  ${C_CYAN}restart${C_RESET}     перезапустить api (+ бот подхватит конфиг заново)
+  ${C_CYAN}status${C_RESET}      что живо, какие интеграции активны / выключены
+  ${C_CYAN}logs${C_RESET} [svc]  логи (по умолчанию api). Ctrl+C — выход
+  ${C_CYAN}bot${C_RESET}         статус MAX-бота + подсказки по включению
+  ${C_CYAN}bot on${C_RESET}      MAX_BOT_ENABLED=true  (нужен токен) и restart api
+  ${C_CYAN}bot off${C_RESET}     MAX_BOT_ENABLED=false и restart api
+  ${C_CYAN}bot mode${C_RESET} <auto|polling|webhook|off>
+  ${C_CYAN}doctor${C_RESET}      проверка Docker, портов и ключей в .env
+  ${C_CYAN}open${C_RESET}        открыть фронт и Swagger в браузере
+  ${C_CYAN}help${C_RESET}        эта справка
+
+${C_BOLD}Адреса после ./trip up${C_RESET}
+  Фронт     ${WEB_URL}
+  API       ${API_URL}
+  Swagger   ${API_URL}/docs
+  Bot API   ${API_URL}/api/v1/bot/status
+
+${C_DIM}Ключи лежат в backend/.env (шаблон — backend/.env.example).${C_RESET}
+EOF
+}
+
+cmd_doctor() {
+  hdr "Doctor"
+  need_docker
+  ok "Docker OK"
+
+  ensure_env
+  ok "backend/.env есть"
+
+  local keys=(
+    GIGACHAT_AUTH_KEY
+    OPENTRIPMAP_API_KEY
+    ORS_API_KEY
+    MAX_BOT_TOKEN
+    MAX_BOT_ENABLED
+    MAX_BOT_MODE
+    MAX_BOT_WEBHOOK_URL
+    MAX_WEBAPP_URL
+    KUDAGO_ENABLED
+    WEATHER_ENABLED
+  )
+  hdr "Ключи в backend/.env"
+  for k in "${keys[@]}"; do
+    local v
+    v="$(env_get "$k")"
+    case "$k" in
+      GIGACHAT_AUTH_KEY|OPENTRIPMAP_API_KEY)
+        if [[ -n "$v" ]]; then ok "$k  задан"; else bad "$k  пусто — маршруты деградируют"; fi
+        ;;
+      ORS_API_KEY)
+        if [[ -n "$v" ]]; then ok "$k  задан"; else warn "$k  пусто — fallback на публичный OSRM"; fi
+        ;;
+      MAX_BOT_TOKEN)
+        if [[ -n "$v" ]]; then ok "$k  задан"; else warn "$k  пусто — бот не поднимется"; fi
+        ;;
+      MAX_BOT_ENABLED)
+        if is_truthy "$v"; then ok "$k=$v"; else warn "$k=$v (бот выключен)"; fi
+        ;;
+      MAX_BOT_MODE)
+        soft_flag "$k=$v" "1"
+        ;;
+      MAX_BOT_WEBHOOK_URL)
+        if [[ -n "$v" ]]; then ok "$k  $v"; else warn "$k  пусто — при mode=auto будет long polling"; fi
+        ;;
+      MAX_WEBAPP_URL)
+        if [[ -n "$v" ]]; then ok "$k  $v"; else warn "$k  пусто"; fi
+        ;;
+      KUDAGO_ENABLED|WEATHER_ENABLED)
+        if is_truthy "$v"; then ok "$k=true"; else warn "$k=false"; fi
+        ;;
+    esac
+  done
+
+  hdr "Порты (занятость — не ошибка, просто FYI)"
+  for port in 3000 8000 5433 6379; do
+    if command -v lsof >/dev/null 2>&1; then
+      if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+        warn ":$port  уже слушает кто-то"
+      else
+        ok ":$port  свободен"
+      fi
+    fi
+  done
+}
+
+wait_healthy() {
+  local tries="${1:-60}"
+  info "Жду healthy api… (${tries}s max)"
+  local i
+  for ((i=1; i<=tries; i++)); do
+    local st
+    st="$(service_state api)"
+    if [[ "$st" == "healthy" ]]; then
+      ok "api healthy"
+      return 0
+    fi
+    # also accept /health even if compose health lagging
+    local body
+    body="$(curl_json "$API_URL/health")"
+    if [[ -n "$body" ]] && echo "$body" | grep -q '"status"'; then
+      ok "api отвечает на /health"
+      return 0
+    fi
+    sleep 1
+  done
+  warn "api ещё не healthy — смотри ./trip logs"
+  return 1
+}
+
+cmd_up() {
+  need_docker
+  ensure_env
+  hdr "Запуск Trip Planner"
+  info "docker compose up -d --build"
+  "${COMPOSE[@]}" up -d --build
+  wait_healthy 90 || true
+  echo
+  cmd_status
+  echo
+  info "Фронт:   $WEB_URL"
+  info "Swagger: $API_URL/docs"
+  info "Статус:  ./trip status"
+  info "Бот:     ./trip bot"
+}
+
+cmd_down() {
+  need_docker
+  hdr "Остановка"
+  "${COMPOSE[@]}" down
+  ok "Стек остановлен"
+}
+
+cmd_restart() {
+  need_docker
+  ensure_env
+  hdr "Restart api"
+  "${COMPOSE[@]}" up -d --build api
+  wait_healthy 60 || true
+  cmd_status
+}
+
+cmd_logs() {
+  need_docker
+  local svc="${1:-api}"
+  info "Логи: $svc (Ctrl+C — выход)"
+  "${COMPOSE[@]}" logs -f --tail=120 "$svc"
+}
+
+cmd_open() {
+  if command -v open >/dev/null 2>&1; then
+    open "$WEB_URL" >/dev/null 2>&1 || true
+    open "$API_URL/docs" >/dev/null 2>&1 || true
+    ok "Открыл $WEB_URL и Swagger"
+  else
+    info "Открой вручную: $WEB_URL  и  $API_URL/docs"
+  fi
+}
+
+cmd_status() {
+  need_docker
+  ensure_env
+
+  hdr "Сервисы"
+  print_service postgres
+  print_service redis
+  print_service api "$API_URL"
+  print_service web "$WEB_URL"
+
+  hdr "Интеграции (из /health и .env)"
+  local health
+  health="$(curl_json "$API_URL/health")"
+  if [[ -z "$health" ]]; then
+    warn "API недоступен — ниже статус только по .env"
+  fi
+
+  # Prefer live health JSON when available; fall back to .env.
+  python3 - "$health" "$ENV_FILE" <<'PY' 2>/dev/null || _status_fallback "$health"
+import json, sys, os, re
+
+health_raw, env_path = sys.argv[1], sys.argv[2]
+data = {}
+if health_raw.strip():
+    try:
+        data = json.loads(health_raw)
+    except Exception:
+        data = {}
+
+def env_get(key):
+    try:
+        text = open(env_path, encoding="utf-8").read()
+    except OSError:
+        return ""
+    m = re.search(rf"^{re.escape(key)}=(.*)$", text, re.M)
+    if not m:
+        return ""
+    return m.group(1).strip().strip('"').strip("'")
+
+def truthy(v):
+    return str(v).strip().lower() in {"1", "true", "yes", "on"}
+
+def row(ok, label, detail=""):
+    mark = "\033[32m●\033[0m" if ok else "\033[31m●\033[0m"
+    if not ok and detail.startswith("optional"):
+        mark = "\033[33m●\033[0m"
+    extra = f" — {detail}" if detail else ""
+    print(f"{mark} {label}{extra}")
+
+# Live flags from /health when present
+if data:
+    row(data.get("status") in {"ok", "degraded"}, f"API status={data.get('status')}")
+    row(bool(data.get("redis")), "Redis")
+    row(bool(data.get("gigachat")), "GigaChat", "LLM" if data.get("gigachat") else "fallback без ключа")
+    row(bool(data.get("opentripmap")), "OpenTripMap", "места" if data.get("opentripmap") else "нужен ключ")
+    row(bool(data.get("ors")), "openrouteservice", "routing" if data.get("ors") else "fallback OSRM")
+    row(bool(data.get("kudago")), "KudaGo", "часы/популярность")
+    row(bool(data.get("weather")), "Open-Meteo", "погода по дням")
+    bot = data.get("bot") or {}
+    enabled = bool(bot.get("enabled"))
+    configured = bool(bot.get("configured"))
+    mode = bot.get("mode") or env_get("MAX_BOT_MODE") or "auto"
+    if enabled and configured:
+        row(True, "MAX bot", f"mode={mode}")
+    elif configured and not enabled:
+        row(False, "MAX bot", f"токен есть, ENABLED=false (mode={mode})")
+    else:
+        row(False, "MAX bot", "нет токена / выключен")
+    wh = bot.get("webhookUrl")
+    if wh:
+        row(True, "Webhook URL", wh)
+    else:
+        row(False, "Webhook URL", "optional — auto→polling")
+else:
+    # .env only
+    row(bool(env_get("GIGACHAT_AUTH_KEY")), "GigaChat")
+    row(bool(env_get("OPENTRIPMAP_API_KEY")), "OpenTripMap")
+    row(bool(env_get("ORS_API_KEY")), "openrouteservice", "optional")
+    row(truthy(env_get("KUDAGO_ENABLED") or "true"), "KudaGo")
+    row(truthy(env_get("WEATHER_ENABLED") or "true"), "Weather")
+    token = bool(env_get("MAX_BOT_TOKEN"))
+    enabled = truthy(env_get("MAX_BOT_ENABLED"))
+    mode = env_get("MAX_BOT_MODE") or "auto"
+    if enabled and token:
+        row(True, "MAX bot", f"mode={mode}")
+    else:
+        row(False, "MAX bot", f"enabled={enabled} token={'yes' if token else 'no'}")
+PY
+}
+
+_status_fallback() {
+  soft_flag "GigaChat" "$( [[ -n "$(env_get GIGACHAT_AUTH_KEY)" ]] && echo 1 || echo 0 )"
+  soft_flag "OpenTripMap" "$( [[ -n "$(env_get OPENTRIPMAP_API_KEY)" ]] && echo 1 || echo 0 )"
+  soft_flag "ORS" "$( [[ -n "$(env_get ORS_API_KEY)" ]] && echo 1 || echo 0 )" "optional"
+  soft_flag "KudaGo" "$( is_truthy "$(env_get KUDAGO_ENABLED)" && echo 1 || echo 0 )"
+  soft_flag "Weather" "$( is_truthy "$(env_get WEATHER_ENABLED)" && echo 1 || echo 0 )"
+  local enabled token mode
+  enabled="$(env_get MAX_BOT_ENABLED)"
+  token="$(env_get MAX_BOT_TOKEN)"
+  mode="$(env_get MAX_BOT_MODE)"
+  if is_truthy "$enabled" && [[ -n "$token" ]]; then
+    ok "MAX bot  mode=${mode:-auto}"
+  else
+    warn "MAX bot  enabled=${enabled:-false} token=$([ -n "$token" ] && echo yes || echo no)"
+  fi
+}
+
+cmd_bot() {
+  local sub="${1:-status}"
+  ensure_env
+  need_docker
+
+  case "$sub" in
+    status|"")
+      hdr "MAX bot"
+      local enabled token mode webhook webapp
+      enabled="$(env_get MAX_BOT_ENABLED)"
+      token="$(env_get MAX_BOT_TOKEN)"
+      mode="$(env_get MAX_BOT_MODE)"
+      webhook="$(env_get MAX_BOT_WEBHOOK_URL)"
+      webapp="$(env_get MAX_WEBAPP_URL)"
+
+      if is_truthy "$enabled"; then ok "MAX_BOT_ENABLED=true"; else warn "MAX_BOT_ENABLED=false"; fi
+      if [[ -n "$token" ]]; then ok "MAX_BOT_TOKEN задан (${#token} символов)"; else bad "MAX_BOT_TOKEN пуст"; fi
+      ok "MAX_BOT_MODE=${mode:-auto}"
+      if [[ -n "$webhook" ]]; then ok "Webhook: $webhook"; else warn "Webhook URL пуст → long polling при mode=auto"; fi
+      if [[ -n "$webapp" ]]; then ok "Mini-app: $webapp"; else warn "MAX_WEBAPP_URL пуст"; fi
+
+      local live
+      live="$(curl_json "$API_URL/api/v1/bot/status")"
+      if [[ -n "$live" ]]; then
+        echo
+        info "Live /api/v1/bot/status:"
+        if command -v python3 >/dev/null 2>&1; then
+          python3 -m json.tool <<<"$live" 2>/dev/null || echo "$live"
+        else
+          echo "$live"
+        fi
+      else
+        warn "API не отвечает — сначала ./trip up"
+      fi
+
+      echo
+      cat <<EOF
+${C_DIM}Как включить для демо:${C_RESET}
+  1. Впиши MAX_BOT_TOKEN из кабинета MAX в backend/.env
+  2. ./trip bot on          # ENABLE=true + restart api
+  3. Без публичного HTTPS — mode=polling (по умолчанию auto)
+  4. С туннелем: MAX_BOT_WEBHOOK_URL=https://…/api/v1/bot/webhook
+     и ./trip bot mode webhook
+EOF
+      ;;
+    on)
+      if [[ -z "$(env_get MAX_BOT_TOKEN)" ]]; then
+        bad "Сначала впиши MAX_BOT_TOKEN в backend/.env"
+        exit 1
+      fi
+      env_set MAX_BOT_ENABLED true
+      if [[ -z "$(env_get MAX_BOT_MODE)" ]]; then
+        env_set MAX_BOT_MODE auto
+      fi
+      ok "MAX_BOT_ENABLED=true"
+      info "Перезапускаю api…"
+      "${COMPOSE[@]}" up -d api
+      wait_healthy 45 || true
+      cmd_bot status
+      ;;
+    off)
+      env_set MAX_BOT_ENABLED false
+      ok "MAX_BOT_ENABLED=false"
+      "${COMPOSE[@]}" up -d api
+      wait_healthy 45 || true
+      ;;
+    mode)
+      local m="${2:-}"
+      case "$m" in
+        auto|polling|webhook|off)
+          env_set MAX_BOT_MODE "$m"
+          ok "MAX_BOT_MODE=$m"
+          if [[ "$m" == "webhook" && -z "$(env_get MAX_BOT_WEBHOOK_URL)" ]]; then
+            warn "Для webhook задай MAX_BOT_WEBHOOK_URL=https://host/api/v1/bot/webhook"
+          fi
+          "${COMPOSE[@]}" up -d api
+          wait_healthy 45 || true
+          ;;
+        *)
+          bad "mode: auto | polling | webhook | off"
+          exit 1
+          ;;
+      esac
+      ;;
+    *)
+      bad "Неизвестно: bot $sub  (status|on|off|mode)"
+      exit 1
+      ;;
+  esac
+}
+
+main() {
+  local cmd="${1:-help}"
+  shift || true
+  case "$cmd" in
+    up|start)     cmd_up "$@" ;;
+    down|stop)    cmd_down "$@" ;;
+    restart)      cmd_restart "$@" ;;
+    status|ps)    cmd_status "$@" ;;
+    logs|log)     cmd_logs "$@" ;;
+    bot)          cmd_bot "$@" ;;
+    doctor|check) cmd_doctor "$@" ;;
+    open)         cmd_open "$@" ;;
+    help|-h|--help) cmd_help ;;
+    *)
+      bad "Неизвестная команда: $cmd"
+      echo
+      cmd_help
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

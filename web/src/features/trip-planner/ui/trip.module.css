@@ -15,15 +15,46 @@
   width: 100%;
   max-width: 480px;
   margin-inline: auto;
-  padding: 20px 16px calc(24px + var(--tp-safe-bottom));
+  padding: 20px 16px calc(24px + var(--tp-nav-offset, var(--tp-safe-bottom)));
   gap: 22px;
 }
+
+.body > * {
+  animation: riseIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.body > *:nth-child(1) { animation-delay: 0ms; }
+.body > *:nth-child(2) { animation-delay: 55ms; }
+.body > *:nth-child(3) { animation-delay: 110ms; }
+.body > *:nth-child(4) { animation-delay: 165ms; }
+.body > *:nth-child(5) { animation-delay: 220ms; }
+.body > *:nth-child(6) { animation-delay: 275ms; }
+.body > *:nth-child(7) { animation-delay: 330ms; }
+.body > *:nth-child(8) { animation-delay: 385ms; }
 
 .bodyFlush {
   padding-inline: 0;
   padding-top: 0;
   gap: 0;
   background: transparent;
+  padding-bottom: calc(12px + var(--tp-nav-offset, var(--tp-safe-bottom)));
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body > * {
+    animation: none;
+  }
 }
 
 .footer {
@@ -78,7 +109,8 @@
   color: var(--tp-muted);
 }
 
-.hintBtn {
+.hintBtn,
+.hintBtnOpen {
   display: inline-grid;
   place-items: center;
   width: 18px;
@@ -94,16 +126,54 @@
   line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
+  transition:
+    background 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s ease;
 }
 
-.hintBtn:active {
+.hintBtn:active,
+.hintBtnOpen:active {
+  transform: scale(0.92);
+}
+
+.hintBtnOpen {
   background: var(--tp-primary-soft);
   color: var(--tp-primary-deep);
   border-color: rgba(0, 122, 255, 0.28);
+  transform: rotate(45deg);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.12);
+}
+
+.hintPanel,
+.hintPanelOpen {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease,
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.hintPanelOpen {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.hintPanelInner {
+  overflow: hidden;
+  min-height: 0;
 }
 
 .hintText {
-  margin: -4px 0 0;
+  margin: 0;
   padding: 10px 12px;
   border-radius: 12px;
   background: rgba(0, 122, 255, 0.06);
@@ -111,6 +181,15 @@
   font-size: 13px;
   line-height: 1.4;
   font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hintBtn,
+  .hintBtnOpen,
+  .hintPanel,
+  .hintPanelOpen {
+    transition: none;
+  }
 }
 
 .card {
@@ -123,9 +202,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-height: 52px;
-  padding: 0 16px;
+  padding: 10px;
   background: var(--tp-surface);
   border-radius: var(--tp-radius-md);
   border: 1px solid rgba(15, 23, 42, 0.04);
@@ -145,7 +224,7 @@
   font-size: 16px;
   font-weight: 400;
   color: var(--tp-text);
-  padding: 14px 0;
+  padding: 0;
 }
 
 .fieldInput::placeholder {
@@ -169,6 +248,18 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.datesStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dateTimeRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(112px, 0.9fr);
+  gap: 10px;
 }
 
 .primaryBtn {

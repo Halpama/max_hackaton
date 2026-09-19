@@ -1,4 +1,9 @@
-/** Upper bound for trip budget input (rubles). */
+/** Minimum trip length in hours. */
+export const MIN_TRIP_DURATION_HOURS = 12
+
+/** Default trip length when the arrival date changes. */
+export const DEFAULT_TRIP_DURATION_DAYS = 3
+
 export const MAX_TRIP_BUDGET = 9_999_999
 
 export type TripPace = 'calm' | 'medium' | 'active'
@@ -14,7 +19,9 @@ export type InterestId =
 export interface TripDraft {
   destination: string
   startDate: string
+  startTime: string
   endDate: string
+  endTime: string
   budget: number
   travelers: number
   interests: InterestId[]
@@ -29,6 +36,9 @@ export interface TransitLeg {
   label: string
 }
 
+/** Whether the rating is a real catalogue signal or our own projection. */
+export type RatingSource = 'catalog' | 'estimate'
+
 export interface Place {
   id: string
   title: string
@@ -37,18 +47,24 @@ export interface Place {
   city: string
   priceLabel: string
   priceValue?: number
+  /** True when we guessed the price — the UI must not present it as a fact. */
+  priceEstimated?: boolean
   durationLabel: string
   timeRange: string
   rating: number
   reviewsLabel: string
+  ratingSource?: RatingSource
   address: string
   description: string
   imageUrl: string
+  openingHours?: string | null
+  sourceUrl?: string | null
+  sourceName?: string | null
   /** [longitude, latitude] */
   coordinates: [number, number]
 }
 
-export type TripStatus = 'ready' | 'draft'
+export type TripStatus = TripGenerationStatus
 
 export interface TripSummary {
   id: string
@@ -68,11 +84,32 @@ export interface Activity {
   meta: string
 }
 
+export type WeatherIcon =
+  | 'clear'
+  | 'cloudy'
+  | 'fog'
+  | 'rain'
+  | 'sleet'
+  | 'snow'
+  | 'storm'
+
+export interface DayWeather {
+  label: string
+  icon: WeatherIcon
+  tempHigh: number
+  tempLow: number
+  precipitationChance?: number | null
+}
+
 export interface DayPlan {
   id: string
   label: string
+  date?: string | null
+  dateLabel?: string | null
   activities: Activity[]
   transits: Array<TransitLeg | null>
+  /** Absent past the 16-day forecast horizon — show a placeholder, not a guess. */
+  weather?: DayWeather | null
 }
 
 export interface RoutePlan {
@@ -82,4 +119,43 @@ export interface RoutePlan {
   budgetLabel: string
   days: DayPlan[]
   places: Record<string, Place>
+}
+
+/** Lifecycle of a trip on the backend, distinct from the `TripStatus` badge. */
+export type TripGenerationStatus = 'pending' | 'running' | 'ready' | 'failed'
+
+export interface TripCreated {
+  id: string
+  status: TripGenerationStatus
+}
+
+export interface TripDetails {
+  id: string
+  status: TripGenerationStatus
+  stage: string | null
+  error: string | null
+  draft: TripDraft
+  route: RoutePlan | null
+}
+
+/** One of the five generation stages, streamed over SSE while the route builds. */
+export interface StageEvent {
+  type: 'stage'
+  key: string
+  index: number
+  label: string
+  status: 'active' | 'done'
+}
+
+export interface DoneEvent {
+  type: 'done'
+  tripId: string
+  route: RoutePlan
+}
+
+export interface GenerationErrorEvent {
+  type: 'error'
+  tripId: string
+  message: string
+  code: string
 }

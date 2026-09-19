@@ -1,0 +1,73 @@
+.wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  line-height: 0;
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.7s cubic-bezier(0.33, 1, 0.68, 1);
+  background: linear-gradient(
+    100deg,
+    var(--tp-track) 28%,
+    #eef0f5 50%,
+    var(--tp-track) 72%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.25s ease-in-out infinite;
+}
+
+.skeletonOut {
+  opacity: 0;
+}
+
+.fade {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.75s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.fadeOut {
+  opacity: 0;
+}
+
+.fadeIn {
+  opacity: 1;
+}
+
+.fade > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    transition: none;
+  }
+
+  .fade {
+    transition: none;
+  }
+}

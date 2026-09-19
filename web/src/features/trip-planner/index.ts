@@ -13,9 +13,11 @@ export type {
 } from './model'
 export {
   DEFAULT_TRIP_DRAFT,
+  DEFAULT_TRIP_DURATION_DAYS,
   INTEREST_OPTIONS,
   LOADING_STEPS,
   MAX_TRIP_BUDGET,
+  MIN_TRIP_DURATION_HOURS,
   MOCK_ROUTE,
   MOCK_TRIPS,
   PACE_OPTIONS,
@@ -23,4 +25,11 @@ export {
   useTripPlanner,
 } from './model'
 export * from './ui'
-export { formatBudget, formatShortDate, formatTravelers } from './lib/format'
+export {
+  formatBudget,
+  formatPlaceTitle,
+  formatShortDate,
+  formatTime,
+  formatTravelers,
+  shiftDateTime,
+} from './lib/format'

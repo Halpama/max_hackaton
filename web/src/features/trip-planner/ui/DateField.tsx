@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { formatShortDate } from '../lib/format'
 import { CalendarIcon } from './icons'
 import styles from './DateField.module.css'
@@ -18,6 +19,8 @@ function clampDate(value: string, min?: string, max?: string) {
 }
 
 export function DateField({ label, value, min, max, onChange }: DateFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
   return (
     <label className={styles.trigger}>
       <span className={styles.icon} aria-hidden>
@@ -28,6 +31,7 @@ export function DateField({ label, value, min, max, onChange }: DateFieldProps) 
         <span className={styles.value}>{formatShortDate(value)}</span>
       </span>
       <input
+        ref={inputRef}
         className={styles.native}
         type="date"
         value={value}
@@ -45,15 +49,13 @@ export function DateField({ label, value, min, max, onChange }: DateFieldProps) 
           const clamped = clampDate(raw, min, max)
           if (clamped !== raw) onChange(clamped)
         }}
-        onFocus={(event) => {
+        onClick={(event) => {
           const input = event.currentTarget
-          if (typeof input.showPicker === 'function') {
-            try {
-              input.showPicker()
-            } catch {
-              // Desktop browsers may reject showPicker outside a direct gesture;
-              // the native input itself remains clickable as fallback.
-            }
+          if (typeof input.showPicker !== 'function') return
+          try {
+            void input.showPicker()
+          } catch {
+            // Safari may reject showPicker — native interaction still works.
           }
         }}
       />

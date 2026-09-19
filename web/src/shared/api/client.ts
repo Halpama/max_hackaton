@@ -11,11 +11,25 @@ export interface RequestOptions extends Omit<RequestInit, 'body' | 'method'> {
   withInitData?: boolean
 }
 
+function resolveUrl(path: string): string {
+  const normalized = path.startsWith('/') ? path : `/${path}`
+  // Empty base → same-origin (Vite proxy in dev / nginx in docker web).
+  return `${API_BASE_URL}${normalized}`
+}
+
 async function parseBody(response: Response): Promise<unknown> {
+  // FastAPI 204 still sends content-type: application/json with an empty body.
+  // Calling response.json() on that throws and looks like a failed request.
+  if (response.status === 204 || response.status === 205) {
+    return undefined
+  }
+
   const contentType = response.headers.get('content-type') ?? ''
 
   if (contentType.includes('application/json')) {
-    return response.json()
+    const text = await response.text()
+    if (!text) return undefined
+    return JSON.parse(text) as unknown
   }
 
   const text = await response.text()
@@ -27,13 +41,6 @@ export async function apiRequest<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   const { method = 'GET', body, withInitData = false, headers, ...rest } = options
-
-  if (!API_BASE_URL) {
-    throw new ApiError(
-      'VITE_API_BASE_URL is not set. Add it to web/.env.local',
-      0,
-    )
-  }
 
   const requestHeaders = new Headers(headers)
 
@@ -48,7 +55,7 @@ export async function apiRequest<T>(
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`, {
+  const response = await fetch(resolveUrl(path), {
     method,
     headers: requestHeaders,
     body: body === undefined ? undefined : JSON.stringify(body),

@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import {
   formatDayHeading,
   formatMoney,
@@ -42,12 +43,18 @@ export function BudgetPanel({
         <div className={styles.summaryTop}>
           <div>
             <p className={styles.kicker}>Бюджет</p>
-            <p className={styles.planned}>{formatMoney(plannedBudget)} ₽</p>
+            <p className={styles.amount}>
+              <span className={styles.amountValue}>{formatMoney(plannedBudget)}</span>
+              <span className={styles.amountCurrency}>₽</span>
+            </p>
           </div>
           <div className={styles.remainBlock}>
-            <p className={styles.kicker}>{overspent ? 'Перерасход' : 'Осталось'}</p>
-            <p className={overspent ? styles.remainBad : styles.remain}>
-              {formatMoney(Math.abs(remaining))} ₽
+            <p className={overspent ? styles.kickerWarn : styles.kickerRemain}>
+              {overspent ? 'Перерасход' : 'Осталось'}
+            </p>
+            <p className={overspent ? styles.amountWarn : styles.amountRemain}>
+              <span className={styles.amountValue}>{formatMoney(Math.abs(remaining))}</span>
+              <span className={styles.amountCurrency}>₽</span>
             </p>
           </div>
         </div>
@@ -162,7 +169,7 @@ function BudgetModal({
     onSubmit({ kind, amount: value, title, date })
   }
 
-  return (
+  return createPortal(
     <div className={styles.modalRoot} role="presentation" onClick={onClose}>
       <div
         className={styles.modal}
@@ -236,6 +243,7 @@ function BudgetModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
