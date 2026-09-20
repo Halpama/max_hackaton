@@ -2,10 +2,10 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   min-height: 52px;
-  padding: 0 14px 0 16px;
+  padding: 10px;
   border: 1px solid rgba(15, 23, 42, 0.04);
   border-radius: var(--tp-radius-md);
   background: var(--tp-surface);
@@ -13,7 +13,6 @@
   text-align: left;
   cursor: pointer;
   color: var(--tp-text);
-  overflow: hidden;
 }
 
 .icon {
@@ -56,6 +55,9 @@
   font-size: 15px;
   font-weight: 500;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .native {
@@ -67,7 +69,12 @@
   margin: 0;
   padding: 0;
   border: 0;
-  opacity: 0.01;
+  /* Safari needs a real hit-target on the input itself to open time/date UI. */
+  opacity: 0.011;
   cursor: pointer;
   color-scheme: light;
+  font-size: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
 }

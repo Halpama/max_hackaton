@@ -1,6 +1,6 @@
 .card {
   display: grid;
-  grid-template-columns: 58px 1fr 18px;
+  grid-template-columns: 58px 1fr 28px;
   align-items: center;
   gap: 12px;
   width: 100%;

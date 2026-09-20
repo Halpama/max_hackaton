@@ -1,0 +1,127 @@
+.root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 48px 20px;
+  animation: fade 260ms ease both;
+}
+
+.icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--tp-radius-pill);
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary);
+  margin-bottom: 4px;
+}
+
+.iconWarn {
+  composes: icon;
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.text {
+  margin: 0;
+  max-width: 320px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--tp-muted);
+}
+
+.action {
+  margin-top: 10px;
+  padding: 11px 22px;
+  border: none;
+  border-radius: var(--tp-radius-pill);
+  background: var(--tp-primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.action:active {
+  transform: scale(0.97);
+  background: var(--tp-primary-deep);
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid var(--tp-track);
+  border-top-color: var(--tp-primary);
+  animation: spin 720ms linear infinite;
+}
+
+.skeletonList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.skeletonCard {
+  height: 76px;
+  border-radius: var(--tp-radius-lg);
+  background: linear-gradient(
+    100deg,
+    var(--tp-surface) 30%,
+    var(--tp-track) 50%,
+    var(--tp-surface) 70%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.3s ease-in-out infinite;
+  box-shadow: var(--tp-shadow-sm);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .spinner,
+  .skeletonCard {
+    animation: none;
+  }
+}

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@maxhub/max-ui'
 import { ROUTES } from '@/shared/config'
 import {
+  CityField,
   DateField,
   formatBudget,
   formatTravelers,
@@ -9,11 +10,12 @@ import {
   PersonIcon,
   RubleIcon,
   Screen,
-  SearchIcon,
   Section,
   Stepper,
   TextField,
+  TimeField,
   useTripPlanner,
+  DEFAULT_TRIP_DURATION_DAYS,
 } from '@/features/trip-planner'
 import tripStyles from '@/features/trip-planner/ui/trip.module.css'
 
@@ -21,10 +23,17 @@ export function NewTripPage() {
   const navigate = useNavigate()
   const { draft, updateDraft, setTravelers } = useTripPlanner()
 
+  const canContinue = draft.destination.trim().length > 0
+
   return (
     <Screen
       footer={
-        <Button stretched size="large" onClick={() => navigate(ROUTES.preferences)}>
+        <Button
+          stretched
+          size="large"
+          disabled={!canContinue}
+          onClick={() => navigate(ROUTES.preferences)}
+        >
           Далее
         </Button>
       }
@@ -33,33 +42,44 @@ export function NewTripPage() {
 
       <Section
         label="Куда едем?"
-        hint="Город или регион, куда хотите поехать."
+        hint="Выберите город из списка — так маршрут строится точнее."
       >
-        <TextField
-          icon={<SearchIcon />}
+        <CityField
           value={draft.destination}
-          onChange={(event) => updateDraft({ destination: event.target.value })}
-          placeholder="Город или страна"
+          onChange={(destination) => updateDraft({ destination })}
+          placeholder="Начните вводить город"
         />
       </Section>
 
       <Section
         label="Даты"
-        hint="Выберите период поездки: день окончания не раньше дня начала."
+        hint={`Приезд — любой. Выезд по умолчанию через ${DEFAULT_TRIP_DURATION_DAYS} дня; короче минимальной длительности поставить нельзя.`}
       >
-        <div className={tripStyles.grid2}>
-          <DateField
-            label="Начало"
-            value={draft.startDate}
-            max={draft.endDate}
-            onChange={(startDate) => updateDraft({ startDate })}
-          />
-          <DateField
-            label="Конец"
-            value={draft.endDate}
-            min={draft.startDate}
-            onChange={(endDate) => updateDraft({ endDate })}
-          />
+        <div className={tripStyles.datesStack}>
+          <div className={tripStyles.dateTimeRow}>
+            <DateField
+              label="Приезд"
+              value={draft.startDate}
+              onChange={(startDate) => updateDraft({ startDate })}
+            />
+            <TimeField
+              label="Время"
+              value={draft.startTime}
+              onChange={(startTime) => updateDraft({ startTime })}
+            />
+          </div>
+          <div className={tripStyles.dateTimeRow}>
+            <DateField
+              label="Выезд"
+              value={draft.endDate}
+              onChange={(endDate) => updateDraft({ endDate })}
+            />
+            <TimeField
+              label="Время"
+              value={draft.endTime}
+              onChange={(endTime) => updateDraft({ endTime })}
+            />
+          </div>
         </div>
       </Section>
 

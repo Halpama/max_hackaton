@@ -1,23 +1,34 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Button, Input, Icon16SearchOutline } from '@maxhub/max-ui'
+import { useEffect, useId, useMemo, useRef, useState, type PointerEvent } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Input, Icon16SearchOutline } from '@maxhub/max-ui'
 import { ROUTES } from '@/shared/config'
 import {
-  HomeTabs,
+  CloseIcon,
+  CompassIcon,
+  HeartIcon,
+  InfoIcon,
   Screen,
   StarIcon,
+  StatusView,
+  WarningIcon,
   useTripPlanner,
-  type HomeTab,
   type Place,
   type TripSummary,
 } from '@/features/trip-planner'
+import { knownCityImage, resolveCityImage } from '@/features/trip-planner/lib/cityImage'
+import { formatPlaceTitle } from '@/features/trip-planner/lib/format'
+import { placeNavState } from '@/features/trip-planner/ui/BottomNav'
+import { SoftImage } from '@/features/trip-planner/ui/SoftImage'
 import tripStyles from '@/features/trip-planner/ui/trip.module.css'
 import styles from '@/features/trip-planner/ui/home.module.css'
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { trips, favoritePlaces } = useTripPlanner()
-  const [tab, setTab] = useState<HomeTab>('trips')
+  const [searchParams] = useSearchParams()
+  const { trips, tripsState, refreshTrips, favoritePlaces, openTrip, removeTrip, toggleFavorite } =
+    useTripPlanner()
+  const tab = searchParams.get('tab') === 'favorites' ? 'favorites' : 'trips'
   const [query, setQuery] = useState('')
   const [city, setCity] = useState('Все')
 
@@ -39,29 +50,37 @@ export function HomePage() {
     })
   }, [city, favoritePlaces, query])
 
-  return (
-    <Screen
-      footer={
-        tab === 'trips' ? (
-          <Button stretched size="large" onClick={() => navigate(ROUTES.newTrip)}>
-            Новая поездка
-          </Button>
-        ) : null
-      }
-    >
-      <HomeTabs value={tab} onChange={setTab} />
+  const handleOpenTrip = (tripId: string) => {
+    void openTrip(tripId)
+    navigate(`${ROUTES.route}?tripId=${tripId}`)
+  }
 
+  return (
+    <Screen>
       {tab === 'trips' ? (
-        <TripsTab trips={trips} onOpenTrip={() => navigate(ROUTES.route)} />
+        <TripsTab
+          key="trips"
+          trips={trips}
+          state={tripsState}
+          onRetry={() => void refreshTrips()}
+          onCreate={() => navigate(ROUTES.newTrip)}
+          onOpenTrip={handleOpenTrip}
+          onRemoveTrip={removeTrip}
+        />
       ) : (
         <FavoritesTab
+          key="favorites"
           query={query}
           onQueryChange={setQuery}
           cities={cities}
           city={city}
           onCityChange={setCity}
           places={filteredFavorites}
-          onOpenPlace={(placeId) => navigate(ROUTES.place(placeId))}
+          hasAny={favoritePlaces.length > 0}
+          onOpenPlace={(placeId) =>
+            navigate(ROUTES.place(placeId), { state: placeNavState('favorites') })
+          }
+          onToggleFavorite={toggleFavorite}
         />
       )}
     </Screen>
@@ -70,42 +89,362 @@ export function HomePage() {
 
 function TripsTab({
   trips,
+  state,
+  onRetry,
+  onCreate,
   onOpenTrip,
+  onRemoveTrip,
 }: {
   trips: TripSummary[]
+  state: 'idle' | 'loading' | 'ready' | 'error'
+  onRetry: () => void
+  onCreate: () => void
   onOpenTrip: (tripId: string) => void
+  onRemoveTrip: (tripId: string) => Promise<void>
 }) {
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<TripSummary | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const confirmDelete = async () => {
+    if (!pendingDelete || deleting) return
+    setDeleting(true)
+    try {
+      await onRemoveTrip(pendingDelete.id)
+      setPendingDelete(null)
+    } catch {
+      // List is refreshed by the provider on failure.
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className={styles.stack}>
-      <h1 className={tripStyles.title}>Мои поездки</h1>
-      <div className={styles.list}>
-        {trips.map((trip) => (
-          <button
-            key={trip.id}
-            type="button"
-            className={styles.card}
-            onClick={() => onOpenTrip(trip.id)}
-          >
-            <div className={styles.copy}>
-              <p className={styles.title}>{trip.city}</p>
-              <p className={styles.subtitle}>
-                {trip.dateLabel} · {trip.travelersLabel}
-              </p>
-            </div>
-            <div className={styles.meta}>
-              <span
-                className={
-                  trip.status === 'ready' ? styles.statusReady : styles.statusDraft
-                }
-              >
-                {trip.status === 'ready' ? 'Готов' : 'Черновик'}
-              </span>
-              <p className={styles.budget}>{trip.budgetLabel}</p>
-            </div>
-          </button>
-        ))}
+      <div className={styles.titleRow}>
+        <h1 className={tripStyles.title}>Мои поездки</h1>
+        <button
+          type="button"
+          className={styles.helpBtn}
+          aria-label="Как это работает"
+          onClick={() => setHelpOpen(true)}
+        >
+          <InfoIcon />
+        </button>
       </div>
+
+      {state === 'error' ? (
+        <StatusView
+          tone="error"
+          icon={<WarningIcon />}
+          title="Не удалось загрузить поездки"
+          text="Не получилось связаться с сервером. Попробуйте ещё раз чуть позже."
+          actionLabel="Повторить"
+          onAction={onRetry}
+        />
+      ) : trips.length === 0 && (state === 'loading' || state === 'idle') ? (
+        <div className={styles.gridSkeleton} aria-hidden>
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className={styles.skeletonTile} />
+          ))}
+        </div>
+      ) : trips.length === 0 ? (
+        <StatusView
+          icon={<CompassIcon />}
+          title="Поездок пока нет"
+          text="Создайте первую — ИИ подберёт места и соберёт маршрут по дням."
+          actionLabel="Новая поездка"
+          onAction={onCreate}
+        />
+      ) : (
+        <div className={styles.grid}>
+          {trips.map((trip, index) => (
+            <div
+              key={trip.id}
+              className={styles.tile}
+              style={{ animationDelay: `${index * 60}ms` }}
+            >
+              <button
+                type="button"
+                className={styles.tileHit}
+                onClick={() => onOpenTrip(trip.id)}
+              >
+                <div className={styles.media}>
+                  <div className={styles.mediaFrame}>
+                    <TripCover city={trip.city} />
+                  </div>
+                  <span className={styles.mediaShade} aria-hidden />
+                  <span className={styles.badge}>
+                    <TripStatusBadge status={trip.status} />
+                  </span>
+                  <div className={styles.tileBody}>
+                    <p className={styles.tileTitle}>{trip.city}</p>
+                    <p className={styles.tileMeta}>
+                      {trip.dateLabel} · {trip.travelersLabel}
+                    </p>
+                    <p className={styles.tileBudget}>{trip.budgetLabel}</p>
+                  </div>
+                </div>
+              </button>
+              <button
+                type="button"
+                className={styles.tileDelete}
+                aria-label={`Удалить поездку в ${trip.city}`}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setPendingDelete(trip)
+                }}
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {helpOpen ? <HowItWorksModal onClose={() => setHelpOpen(false)} /> : null}
+      {pendingDelete ? (
+        <DeleteTripModal
+          city={pendingDelete.city}
+          busy={deleting}
+          onCancel={() => {
+            if (!deleting) setPendingDelete(null)
+          }}
+          onConfirm={() => void confirmDelete()}
+        />
+      ) : null}
     </div>
+  )
+}
+
+function DeleteTripModal({
+  city,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  city: string
+  busy: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const titleId = useId()
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy) onCancel()
+    }
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [busy, onCancel])
+
+  return createPortal(
+    <div className={styles.confirmRoot} role="presentation" onClick={onCancel}>
+      <div
+        className={styles.confirmModal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id={titleId} className={styles.confirmTitle}>
+          Удалить поездку?
+        </h2>
+        <p className={styles.confirmText}>
+          Маршрут «{city}» исчезнет из списка. Избранные места и данные поездки
+          останутся в системе.
+        </p>
+        <div className={styles.confirmActions}>
+          <button
+            type="button"
+            className={styles.confirmCancel}
+            disabled={busy}
+            onClick={onCancel}
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            className={styles.confirmDelete}
+            disabled={busy}
+            onClick={onConfirm}
+          >
+            {busy ? 'Удаляем…' : 'Удалить'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+function HowItWorksModal({ onClose }: { onClose: () => void }) {
+  const titleId = useId()
+  const dragRef = useRef<{ startY: number; lastY: number; dragging: boolean }>({
+    startY: 0,
+    lastY: 0,
+    dragging: false,
+  })
+  const [dragY, setDragY] = useState(0)
+  const [dragging, setDragging] = useState(false)
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  const onHandlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragRef.current = { startY: event.clientY, lastY: event.clientY, dragging: true }
+    setDragging(true)
+    setDragY(0)
+  }
+
+  const onHandlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+    if (!dragRef.current.dragging) return
+    const delta = Math.max(0, event.clientY - dragRef.current.startY)
+    dragRef.current.lastY = event.clientY
+    setDragY(delta)
+  }
+
+  const finishDrag = () => {
+    if (!dragRef.current.dragging) return
+    const delta = Math.max(0, dragRef.current.lastY - dragRef.current.startY)
+    dragRef.current.dragging = false
+    setDragging(false)
+    if (delta > 80) {
+      onClose()
+      return
+    }
+    setDragY(0)
+  }
+
+  const backdropOpacity = Math.max(0.12, 0.4 * (1 - dragY / 280))
+
+  return createPortal(
+    <div
+      className={styles.helpRoot}
+      role="presentation"
+      style={{ background: `rgba(15, 23, 42, ${backdropOpacity})` }}
+      onClick={onClose}
+    >
+      <div
+        className={dragging ? styles.helpModalDragging : styles.helpModal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        style={{ transform: dragY ? `translateY(${dragY}px)` : undefined }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          className={styles.helpHandle}
+          aria-label="Потяните вниз, чтобы закрыть"
+          onPointerDown={onHandlePointerDown}
+          onPointerMove={onHandlePointerMove}
+          onPointerUp={finishDrag}
+          onPointerCancel={finishDrag}
+        />
+        <h2 id={titleId} className={styles.helpTitle}>
+          Как это работает
+        </h2>
+        <ol className={styles.helpList}>
+          <li>
+            <strong>Новая поездка</strong> — город, даты, бюджет и интересы.
+          </li>
+          <li>
+            <strong>ИИ собирает маршрут</strong> по дням: места, время и дорога между ними.
+          </li>
+          <li>
+            <strong>Сборы и бюджет</strong> — чеклист вещей и учёт трат в одной поездке.
+          </li>
+          <li>
+            <strong>Избранное</strong> — сохраняйте места из маршрута, чтобы вернуться к ним
+            позже.
+          </li>
+        </ol>
+        <button type="button" className={styles.helpClose} onClick={onClose}>
+          Понятно
+        </button>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+function TripStatusBadge({ status }: { status: TripSummary['status'] }) {
+  if (status === 'ready') {
+    return <span className={styles.statusReady}>Готов</span>
+  }
+  if (status === 'failed') {
+    return <span className={styles.statusFailed}>Ошибка</span>
+  }
+  if (status === 'running') {
+    return <span className={styles.statusRunning}>Строится…</span>
+  }
+  return <span className={styles.statusDraft}>В очереди</span>
+}
+
+function TripCover({ city }: { city: string }) {
+  const [src, setSrc] = useState<string | null>(() => knownCityImage(city))
+  const [failed, setFailed] = useState(false)
+  const [resolving, setResolving] = useState(() => !knownCityImage(city))
+
+  useEffect(() => {
+    let cancelled = false
+    setFailed(false)
+    const known = knownCityImage(city)
+    if (known) {
+      setSrc(known)
+      setResolving(false)
+      return
+    }
+    setSrc(null)
+    setResolving(true)
+    void resolveCityImage(city).then((url) => {
+      if (cancelled) return
+      setSrc(url)
+      setResolving(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [city])
+
+  if (resolving && !src) {
+    return <span className={styles.imageSkeleton} aria-hidden />
+  }
+
+  if (!src || failed) {
+    return (
+      <div className={styles.coverFallback} aria-hidden>
+        <span>{city.slice(0, 1).toUpperCase()}</span>
+      </div>
+    )
+  }
+
+  return (
+    <SoftImage
+      className={styles.coverImg}
+      skeletonClassName={styles.coverSkeleton}
+      src={src}
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
   )
 }
 
@@ -116,7 +455,9 @@ function FavoritesTab({
   city,
   onCityChange,
   places,
+  hasAny,
   onOpenPlace,
+  onToggleFavorite,
 }: {
   query: string
   onQueryChange: (value: string) => void
@@ -124,60 +465,94 @@ function FavoritesTab({
   city: string
   onCityChange: (value: string) => void
   places: Place[]
+  hasAny: boolean
   onOpenPlace: (placeId: string) => void
+  onToggleFavorite: (placeId: string) => void
 }) {
   return (
     <div className={styles.stack}>
       <h1 className={tripStyles.title}>Избранное</h1>
 
-      <Input
-        mode="contrast"
-        size="large"
-        placeholder="Поиск по избранным"
-        value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-        iconBefore={<Icon16SearchOutline />}
-        withClearButton
-      />
-
-      <div className={styles.filters}>
-        {cities.map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={item === city ? styles.chipActive : styles.chip}
-            onClick={() => onCityChange(item)}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
-
-      {places.length === 0 ? (
-        <p className={styles.empty}>Пока ничего не найдено</p>
+      {!hasAny ? (
+        <StatusView
+          icon={<HeartIcon />}
+          title="Здесь пока пусто"
+          text="Открывайте места в маршруте и добавляйте их в избранное — они появятся тут."
+        />
       ) : (
-        <div className={styles.list}>
-          {places.map((place) => (
-            <button
-              key={place.id}
-              type="button"
-              className={styles.cardWide}
-              onClick={() => onOpenPlace(place.id)}
-            >
-              <FavoriteThumb place={place} />
-              <div className={styles.copy}>
-                <p className={styles.title}>{place.title}</p>
-                <p className={styles.subtitle}>
-                  {place.city} · {shortCategory(place.category)}
-                </p>
-              </div>
-              <span className={styles.rating}>
-                <StarIcon />
-                {place.rating}
-              </span>
-            </button>
-          ))}
-        </div>
+        <>
+          <Input
+            mode="contrast"
+            size="large"
+            placeholder="Поиск по избранным"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            iconBefore={<Icon16SearchOutline />}
+            withClearButton
+          />
+
+          <div className={styles.filters}>
+            {cities.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={item === city ? styles.chipActive : styles.chip}
+                onClick={() => onCityChange(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          {places.length === 0 ? (
+            <p className={styles.empty}>Пока ничего не найдено</p>
+          ) : (
+            <div className={styles.grid}>
+              {places.map((place, index) => (
+                <div
+                  key={place.id}
+                  className={styles.tile}
+                  style={{ animationDelay: `${index * 60}ms` }}
+                >
+                  <button
+                    type="button"
+                    className={styles.tileHit}
+                    onClick={() => onOpenPlace(place.id)}
+                  >
+                    <div className={styles.media}>
+                      <div className={styles.mediaFrame}>
+                        <FavoriteThumb place={place} />
+                      </div>
+                      <span className={styles.mediaShade} aria-hidden />
+                      <span className={styles.ratingFloat}>
+                        <StarIcon />
+                        {place.rating}
+                      </span>
+                      <div className={styles.tileBody}>
+                        <p className={styles.tileTitle}>{formatPlaceTitle(place.title)}</p>
+                        <p className={styles.tileMeta}>
+                          {place.city} · {shortCategory(place.category)}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.favToggle}
+                    aria-label="Убрать из избранного"
+                    aria-pressed
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onToggleFavorite(place.id)
+                    }}
+                  >
+                    <HeartIcon filled />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -185,21 +560,27 @@ function FavoritesTab({
 
 function shortCategory(category: string) {
   const first = category.split(/[·,]/)[0]?.trim()
-  return first && first.length <= 28 ? first : `${category.slice(0, 26)}…`
+  return first && first.length <= 22 ? first : `${category.slice(0, 20)}…`
 }
 
 function FavoriteThumb({ place }: { place: Place }) {
   const [failed, setFailed] = useState(false)
 
   if (failed || !place.imageUrl) {
-    return <div className={styles.thumbFallback} aria-hidden />
+    return (
+      <div className={styles.coverFallback} aria-hidden>
+        <span>{place.title.slice(0, 1).toUpperCase()}</span>
+      </div>
+    )
   }
 
   return (
-    <img
-      className={styles.thumb}
+    <SoftImage
+      className={styles.coverImg}
+      skeletonClassName={styles.coverSkeleton}
       src={place.imageUrl}
       alt=""
+      loading="lazy"
       onError={() => setFailed(true)}
     />
   )

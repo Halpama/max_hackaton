@@ -1,0 +1,48 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+
+.sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+}
+
+.sm svg {
+  width: 14px;
+  height: 14px;
+}
+
+.md {
+  width: 32px;
+  height: 32px;
+}
+
+.md svg {
+  width: 16px;
+  height: 16px;
+}
+
+.museum {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+}
+
+.food {
+  background: rgba(234, 88, 12, 0.12);
+  color: #c2410c;
+}
+
+.walk {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.location {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0369a1;
+}

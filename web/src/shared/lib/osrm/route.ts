@@ -1,10 +1,7 @@
-/** [longitude, latitude] */
-export type LngLat = [number, number]
+import { withOsrmCache } from './cache'
+import type { LngLat, RouteProfile, TransitModeLike } from './types'
 
-/** OSRM routing profile — chosen from backend transit mode */
-export type RouteProfile = 'foot' | 'driving'
-
-export type TransitModeLike = 'walk' | 'taxi' | 'metro' | string
+export type { LngLat, RouteProfile, TransitModeLike }
 
 interface OsrmRouteResponse {
   code?: string
@@ -35,13 +32,11 @@ export function profileFromTransitMode(
   return 'foot'
 }
 
-async function fetchProfileRoute(
+async function fetchProfileRouteNetwork(
   coords: LngLat[],
   profile: RouteProfile,
   signal?: AbortSignal,
 ): Promise<LngLat[]> {
-  if (coords.length < 2) return coords
-
   const path = coords.map(([lng, lat]) => `${lng},${lat}`).join(';')
   const query = '?overview=full&geometries=geojson'
   let lastError: unknown
@@ -71,6 +66,25 @@ async function fetchProfileRoute(
   }
 
   throw lastError instanceof Error ? lastError : new Error('OSRM unavailable')
+}
+
+async function fetchProfileRoute(
+  coords: LngLat[],
+  profile: RouteProfile,
+  signal?: AbortSignal,
+): Promise<LngLat[]> {
+  if (coords.length < 2) return coords
+
+  // Cache per A→B (+ profile). Day routes are stitched from these legs so
+  // switching days / revisiting a trip hits localStorage instead of OSRM.
+  // Network fetch is not aborted by the caller signal so a shared in-flight
+  // request can still fill the cache; the caller stops waiting via withOsrmCache.
+  return withOsrmCache(
+    coords,
+    profile,
+    () => fetchProfileRouteNetwork(coords, profile),
+    signal,
+  )
 }
 
 /**
