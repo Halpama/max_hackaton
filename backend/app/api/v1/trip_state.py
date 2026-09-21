@@ -18,6 +18,7 @@ from app.schemas.state import (
     TripStateResponse,
     TripStateUpdate,
 )
+from app.services.audit import record_event
 
 router = APIRouter(prefix="/trips", tags=["trip-state"])
 
@@ -49,6 +50,13 @@ async def put_state(
 ) -> TripStateResponse:
     state = await get_or_create_trip_state(session, trip.id)
     state.packing = [block.model_dump(by_alias=True) for block in payload.packing]
+    await record_event(
+        "packing_updated",
+        user_id=trip.user_id,
+        trip_id=trip.id,
+        session=session,
+        payload={"blocks": len(payload.packing)},
+    )
     return TripStateResponse(packing=payload.packing)
 
 
@@ -69,6 +77,13 @@ async def post_ledger(
         title=payload.title.strip() or DEFAULT_TITLES[payload.kind],
         entry_date=payload.date or date.today(),
     )
+    await record_event(
+        "expenses_updated",
+        user_id=trip.user_id,
+        trip_id=trip.id,
+        session=session,
+        payload={"action": "added", "kind": payload.kind, "amount": payload.amount},
+    )
     return to_ledger_out(entry)
 
 
@@ -79,3 +94,10 @@ async def delete_ledger(trip: OwnedTrip, entry_id: str, session: DbSession) -> N
     except ValueError as exc:
         raise NotFoundError(f"Ledger entry not found: {entry_id}") from exc
     await delete_ledger_entry(session, trip.id, parsed)
+    await record_event(
+        "expenses_updated",
+        user_id=trip.user_id,
+        trip_id=trip.id,
+        session=session,
+        payload={"action": "deleted", "entry_id": str(parsed)},
+    )

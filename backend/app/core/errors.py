@@ -48,14 +48,22 @@ class ConfigurationError(AppError):
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:
+        logger.warning("Application error: %s", type(exc).__name__)
         return JSONResponse(
             status_code=exc.status_code,
             content={"code": exc.code, "message": exc.message, "details": exc.details},
         )
 
     @app.exception_handler(Exception)
-    async def _handle_unexpected(_: Request, exc: Exception) -> JSONResponse:
-        logger.exception("Unhandled error: %s", exc)
+    async def _handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception(
+            "Unhandled error",
+            extra={
+                "endpoint": request.url.path,
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+            },
+        )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"code": "internal_error", "message": "Internal server error"},

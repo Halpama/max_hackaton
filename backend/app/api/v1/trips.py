@@ -24,6 +24,7 @@ from app.schemas.trip import (
     TripSummary,
 )
 from app.services import formatting, progress
+from app.services.audit import record_event
 from app.services.budget import budget_label
 from app.services.pipeline import generate_trip, parse_draft_bounds
 
@@ -107,6 +108,14 @@ async def create_trip(draft: TripDraft, session: DbSession, user: CurrentUser) -
     session.add(trip)
     await session.commit()
 
+    await record_event(
+        "trip_created",
+        user_id=user.id,
+        trip_id=trip.id,
+        session=session,
+        payload={"destination": trip.destination, "travelers": trip.travelers},
+    )
+
     _spawn(trip.id, draft)
     return TripCreated(id=str(trip.id), status="pending")
 
@@ -125,6 +134,9 @@ async def get_trip_by_id(trip: OwnedTrip) -> TripResponse:
 async def delete_trip(trip: OwnedTrip, session: DbSession) -> None:
     """Soft-hide the trip. Places, favourites and plan caches stay untouched."""
     await archive_trip(session, trip)
+    await record_event(
+        "trip_archived", user_id=trip.user_id, trip_id=trip.id, session=session
+    )
 
 
 @router.post("/{trip_id}/retry", response_model=TripCreated)
@@ -135,6 +147,13 @@ async def retry_trip(trip: OwnedTrip, session: DbSession) -> TripCreated:
     trip.stage = None
     trip.error = None
     await session.commit()
+    await record_event(
+        "trip_updated",
+        user_id=trip.user_id,
+        trip_id=trip.id,
+        session=session,
+        payload={"action": "retry"},
+    )
 
     # Drop the old progress log so the loader does not replay the failed run.
     try:
