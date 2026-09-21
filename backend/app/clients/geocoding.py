@@ -35,6 +35,19 @@ POPULAR_CITIES: tuple[dict[str, str], ...] = (
     {"name": "Владивосток", "subtitle": "Россия", "label": "Владивосток"},
 )
 
+#: Last-resort coords when OpenTripMap and Open-Meteo are both unreachable.
+_KNOWN_COORDS: dict[str, tuple[float, float]] = {
+    "москва": (55.7558, 37.6173),
+    "санкт-петербург": (59.9311, 30.3609),
+    "петербург": (59.9311, 30.3609),
+    "казань": (55.7963, 49.1088),
+    "сочи": (43.6028, 39.7342),
+    "екатеринбург": (56.8389, 60.6057),
+    "нижний новгород": (56.2965, 43.9361),
+    "калининград": (54.7104, 20.4522),
+    "владивосток": (43.1155, 131.8855),
+}
+
 _KNOWN_CITY_NAMES = frozenset(CITY_SLUGS) | {
     city["name"].casefold() for city in POPULAR_CITIES
 }
@@ -80,13 +93,56 @@ def is_trip_city(item: dict) -> bool:
     return False
 
 
+async def resolve_coords(name: str) -> dict[str, float]:
+    """Resolve a city name to lat/lon without OpenTripMap.
+
+    Used when `api.opentripmap.com` is unreachable from the host (common on
+    some RU VDS networks). Prefers Open-Meteo, then a small built-in table.
+    """
+    q = (name or "").strip()
+    if not q:
+        raise ValueError("empty city name")
+
+    cache_key = f"geo:coords:v1:{q.casefold()}"
+
+    async def produce() -> dict[str, float]:
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                response = await client.get(
+                    GEOCODE_URL,
+                    params={
+                        "name": q,
+                        "count": 5,
+                        "language": "ru",
+                        "format": "json",
+                    },
+                )
+                response.raise_for_status()
+                payload = response.json()
+            for item in payload.get("results") or []:
+                lat, lon = item.get("latitude"), item.get("longitude")
+                if lat is None or lon is None:
+                    continue
+                return {"lat": float(lat), "lon": float(lon), "name": str(item.get("name") or q)}
+        except Exception as exc:  # noqa: BLE001 - fall through to table
+            logger.warning("Open-Meteo geocode failed for %s: %s", q, exc)
+
+        known = _KNOWN_COORDS.get(q.casefold())
+        if known is not None:
+            return {"lat": known[0], "lon": known[1], "name": q}
+
+        raise LookupError(f"City not found: {q}")
+
+    return await cached_json(cache_key, keys.TTL_GEONAME, produce)
+
+
 async def suggest_cities(query: str, *, limit: int = 8) -> list[dict[str, str]]:
     """Return city suggestions for the trip destination field."""
     q = (query or "").strip()
     if len(q) < 2:
         return list(POPULAR_CITIES)[:limit]
 
-    cache_key = f"geo:city:ru:v3:{q.lower()}:{limit}"
+    cache_key = f"geo:city:ru:v4:{q.lower()}:{limit}"
 
     async def produce() -> list[dict[str, str]]:
         try:
@@ -106,6 +162,7 @@ async def suggest_cities(query: str, *, limit: int = 8) -> list[dict[str, str]]:
                 payload = response.json()
         except Exception:
             logger.exception("city geocode failed for %s", q)
+            # Transient upstream failures must not be cached as "no cities".
             return [
                 city
                 for city in POPULAR_CITIES

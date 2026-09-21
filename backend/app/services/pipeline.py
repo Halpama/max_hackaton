@@ -12,10 +12,11 @@ from sqlalchemy import select
 
 from app.cache import keys
 from app.cache.decorator import cached_json
+from app.clients.geocoding import resolve_coords
 from app.clients.opentripmap import opentripmap
 from app.clients.weather import weather as weather_client
 from app.core.config import settings
-from app.core.errors import AppError, NotFoundError
+from app.core.errors import AppError, NotFoundError, UpstreamError
 from app.core.logging import get_logger
 from app.db.models import Trip
 from app.db.repositories import upsert_places
@@ -169,7 +170,21 @@ async def build_route(
 
     # 2. Подбор мест
     await stage_start("places")
-    geo = await opentripmap.geoname(analysis["geoQuery"])
+    geo_query = analysis["geoQuery"]
+    try:
+        geo = await opentripmap.geoname(geo_query)
+    except (UpstreamError, NotFoundError, AppError) as exc:
+        logger.warning("OpenTripMap geoname failed (%s), falling back to Open-Meteo", exc)
+        try:
+            geo = await resolve_coords(geo_query)
+        except Exception as geo_exc:  # noqa: BLE001
+            # Last try: display city name from the LLM / draft.
+            try:
+                geo = await resolve_coords(city)
+            except Exception:
+                raise NotFoundError(
+                    f"Не удалось найти координаты для «{city}»"
+                ) from geo_exc
     lat, lon = float(geo["lat"]), float(geo["lon"])
 
     per_day = PACE_ACTIVITY_COUNT.get(draft.pace, 5)

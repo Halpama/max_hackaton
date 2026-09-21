@@ -1,4 +1,5 @@
 """Turn OpenTripMap and KudaGo records into the Place shape the frontend expects."""
+import html
 import re
 from dataclasses import dataclass, field
 
@@ -237,8 +238,16 @@ def pick_category_kind(kinds: list[str], title: str = "") -> CategoryKind:
     return "location"
 
 
+_TAG_RE = re.compile(r"<[^>]+>", re.DOTALL)
+
+
 def _clean_text(value: str) -> str:
-    return re.sub(r"\s+", " ", value or "").strip()
+    """Plain text for the UI — KudaGo ships HTML with inline styles."""
+    text = html.unescape(value or "")
+    text = re.sub(r"(?i)<br\s*/?>", " ", text)
+    text = re.sub(r"(?i)</p\s*>", " ", text)
+    text = _TAG_RE.sub("", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def prettify_title(title: str) -> str:
@@ -274,18 +283,34 @@ def build_address(details: dict, city: str) -> str:
     )
 
 
+def _clip_description(text: str, *, limit: int = 2_500) -> str:
+    """Keep descriptions readable without chopping mid-word like `text[:600]`."""
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    window = text[:limit]
+    for sep in (". ", "! ", "? ", "… "):
+        idx = window.rfind(sep)
+        if idx >= limit // 2:
+            return window[: idx + 1].strip()
+    idx = window.rfind(" ")
+    if idx >= limit // 2:
+        return window[:idx].rstrip(".,;:") + "…"
+    return window.rstrip() + "…"
+
+
 def build_description(details: dict, fallback_category: str, city: str) -> str:
     extracts = details.get("wikipedia_extracts") or {}
     if isinstance(extracts, dict):
         text = _clean_text(extracts.get("text", ""))
         if len(text) > 40:
-            return text[:600]
+            return _clip_description(text)
 
     info = details.get("info") or {}
     if isinstance(info, dict):
         text = _clean_text(info.get("descr", ""))
         if len(text) > 40:
-            return text[:600]
+            return _clip_description(text)
 
     return f"{fallback_category} в городе {city}. Подробное описание пока недоступно."
 
@@ -430,7 +455,7 @@ def kudago_to_candidate(
         category=label,
         category_kind=kind,
         address=address,
-        description=description[:600],
+        description=_clip_description(description),
         image_url=image_url,
         city=city,
         interests=set(interests),
@@ -620,9 +645,14 @@ async def _radius_with_fallback(
         )
     except UpstreamError as exc:
         logger.warning("Kinds '%s' rejected (%s), retrying with '%s'", kinds, exc, fallback)
-        return await opentripmap.radius(
-            lat=lat, lon=lon, kinds=fallback, meters=meters, limit=limit
-        )
+        try:
+            return await opentripmap.radius(
+                lat=lat, lon=lon, kinds=fallback, meters=meters, limit=limit
+            )
+        except UpstreamError as retry_exc:
+            # Host cannot reach OpenTripMap at all — let KudaGo carry the trip.
+            logger.warning("OpenTripMap radius unavailable: %s", retry_exc)
+            return []
 
 
 async def _search_radius(

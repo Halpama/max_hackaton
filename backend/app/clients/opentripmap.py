@@ -25,6 +25,8 @@ class OpenTripMapClient:
         self._semaphore = asyncio.Semaphore(3)
         self._pace_lock = asyncio.Lock()
         self._next_slot = 0.0
+        #: Host cannot reach api.opentripmap.com — fail fast for the rest of the trip.
+        self._unreachable = False
 
     async def _pace(self) -> None:
         """Space requests out — bursts of detail lookups earn a 429 otherwise."""
@@ -43,7 +45,7 @@ class OpenTripMapClient:
         if self._client is None:
             self._client = httpx.AsyncClient(
                 base_url=f"{BASE_URL}/{settings.opentripmap_lang}/places",
-                timeout=httpx.Timeout(20.0, connect=10.0),
+                timeout=httpx.Timeout(5.0, connect=2.5),
             )
         return self._client
 
@@ -55,20 +57,27 @@ class OpenTripMapClient:
     async def _get(self, path: str, params: dict[str, object]) -> object:
         if not settings.opentripmap_configured:
             raise ConfigurationError("OPENTRIPMAP_API_KEY is not set")
+        if self._unreachable:
+            raise UpstreamError(f"OpenTripMap {path} unavailable: host unreachable")
 
         client = await self._http()
         query = {**params, "apikey": settings.opentripmap_api_key}
 
         last_error: str = ""
-        for attempt in range(4):
+        for attempt in range(2):
             await consume_opentripmap_call()
             await self._pace()
             async with self._semaphore:
                 try:
                     response = await client.get(path, params=query)
+                except httpx.TransportError as exc:
+                    # Connect/timeouts will not heal mid-trip on this VDS.
+                    last_error = str(exc)
+                    self._unreachable = True
+                    raise UpstreamError(f"OpenTripMap {path} unavailable: {last_error}") from exc
                 except httpx.HTTPError as exc:
                     last_error = str(exc)
-                    await asyncio.sleep(0.5 * (attempt + 1))
+                    await asyncio.sleep(0.3 * (attempt + 1))
                     continue
 
             if response.status_code == 404:
@@ -77,7 +86,7 @@ class OpenTripMapClient:
                 last_error = f"{response.status_code} {response.text[:120]}"
                 retry_after = response.headers.get("Retry-After")
                 backoff = float(retry_after) if (retry_after or "").isdigit() else 0.0
-                await asyncio.sleep(max(backoff, 0.75 * (attempt + 1)))
+                await asyncio.sleep(max(backoff, 0.5 * (attempt + 1)))
                 continue
             if response.status_code != 200:
                 raise UpstreamError(

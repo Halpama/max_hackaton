@@ -35,7 +35,10 @@ async def cached_json(
 
     value = await producer()
 
-    if redis is not None and value is not None:
+    # Never persist an empty list: during upstream outages producers often
+    # return [] and would otherwise poison a long TTL (city search looked like
+    # "only popular cities exist").
+    if redis is not None and value is not None and value != []:
         try:
             await redis.set(key, orjson.dumps(value), ex=ttl)
         except Exception as exc:  # noqa: BLE001

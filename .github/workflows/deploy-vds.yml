@@ -1,0 +1,72 @@
+name: Deploy to VDS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vds
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          set -euo pipefail
+          test -n "${DEPLOY_SSH_KEY:-}" || { echo "Missing secret DEPLOY_SSH_KEY"; exit 1; }
+          test -n "${DEPLOY_HOST:-}" || { echo "Missing secret DEPLOY_HOST"; exit 1; }
+          test -n "${DEPLOY_USER:-}" || { echo "Missing secret DEPLOY_USER"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          PORT="${DEPLOY_PORT:-22}"
+          ssh-keyscan -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          {
+            echo "Host vds"
+            echo "  HostName $DEPLOY_HOST"
+            echo "  User $DEPLOY_USER"
+            echo "  Port $PORT"
+            echo "  IdentityFile ~/.ssh/deploy_key"
+            echo "  StrictHostKeyChecking accept-new"
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Sync project to VDS
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh" \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.env' \
+            --exclude 'backend/.env' \
+            --exclude 'backend/logs/' \
+            --exclude '**/__pycache__/' \
+            --exclude '**/.DS_Store' \
+            --exclude 'web/node_modules/' \
+            --exclude 'web/dist/' \
+            ./ vds:/root/max_hackaton/
+
+      - name: Rebuild and restart stack
+        run: |
+          set -euo pipefail
+          ssh vds 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /root/max_hackaton
+          docker compose up -d --build
+          docker compose ps
+          curl -fsS --max-time 20 http://127.0.0.1:8000/health
+          echo
+          REMOTE

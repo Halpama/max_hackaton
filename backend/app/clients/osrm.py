@@ -58,10 +58,13 @@ class OsrmClient:
         #: Flipped once ORS refuses us (bad key, daily quota gone) so the rest
         #: of the trip does not pay a timeout per leg.
         self._ors_disabled = False
+        #: Public OSRM mirrors unreachable from this host (common on locked-down VDS).
+        self._osrm_disabled = False
 
     async def _http(self) -> httpx.AsyncClient:
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=httpx.Timeout(12.0, connect=6.0))
+            # Keep this tight: a blocked upstream must not stall a whole trip.
+            self._client = httpx.AsyncClient(timeout=httpx.Timeout(4.0, connect=2.0))
         return self._client
 
     async def aclose(self) -> None:
@@ -106,7 +109,9 @@ class OsrmClient:
                     },
                 )
         except httpx.HTTPError as exc:
-            logger.debug("ORS request failed: %s", exc)
+            # Timeouts / unreachable hosts will repeat for every leg otherwise.
+            logger.warning("ORS unreachable (%s), using geometric estimates", exc)
+            self._ors_disabled = True
             return None
 
         if response.status_code in {401, 403}:
@@ -146,26 +151,27 @@ class OsrmClient:
             if from_ors is not None:
                 return from_ors
 
-            client = await self._http()
-            for base in ENDPOINTS.get(profile, ENDPOINTS["foot"]):
-                async with self._semaphore:
-                    try:
-                        response = await client.get(f"{base}/{coords}?overview=false")
-                    except httpx.HTTPError as exc:
-                        logger.debug("OSRM %s failed: %s", base, exc)
+            if not self._osrm_disabled:
+                client = await self._http()
+                for base in ENDPOINTS.get(profile, ENDPOINTS["foot"]):
+                    async with self._semaphore:
+                        try:
+                            response = await client.get(f"{base}/{coords}?overview=false")
+                        except httpx.HTTPError as exc:
+                            logger.warning("OSRM unreachable (%s), skipping mirrors", exc)
+                            self._osrm_disabled = True
+                            break
+
+                    if response.status_code != 200:
                         continue
+                    routes = response.json().get("routes") or []
+                    if not routes:
+                        continue
+                    return {
+                        "distance": float(routes[0].get("distance", 0.0)),
+                        "duration": float(routes[0].get("duration", 0.0)),
+                    }
 
-                if response.status_code != 200:
-                    continue
-                routes = response.json().get("routes") or []
-                if not routes:
-                    continue
-                return {
-                    "distance": float(routes[0].get("distance", 0.0)),
-                    "duration": float(routes[0].get("duration", 0.0)),
-                }
-
-            logger.debug("OSRM unavailable for %s, using estimate", coords)
             return estimate(origin, destination, profile)
 
         return await cached_json(keys.osrm(profile, coords), keys.TTL_OSRM, produce)
