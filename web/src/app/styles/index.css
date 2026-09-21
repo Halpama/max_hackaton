@@ -21,6 +21,7 @@
   --tp-radius-pill: 999px;
   --tp-font: 'Manrope', system-ui, -apple-system, sans-serif;
   --tp-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tp-nav-offset: var(--tp-safe-bottom);
 }
 
 *,

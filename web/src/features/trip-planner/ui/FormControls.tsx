@@ -30,7 +30,7 @@ export function Section({
         {hint ? (
           <button
             type="button"
-            className={styles.hintBtn}
+            className={hintOpen ? styles.hintBtnOpen : styles.hintBtn}
             aria-label="Подсказка"
             aria-expanded={hintOpen}
             aria-controls={hintId}
@@ -41,10 +41,17 @@ export function Section({
           </button>
         ) : null}
       </div>
-      {hint && hintOpen ? (
-        <p id={hintId} className={styles.hintText} role="note">
-          {hint}
-        </p>
+      {hint ? (
+        <div
+          className={hintOpen ? styles.hintPanelOpen : styles.hintPanel}
+          id={hintId}
+          role="note"
+          aria-hidden={!hintOpen}
+        >
+          <div className={styles.hintPanelInner}>
+            <p className={styles.hintText}>{hint}</p>
+          </div>
+        </div>
       ) : null}
       {children}
     </section>

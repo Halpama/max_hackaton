@@ -2,6 +2,22 @@ export function formatBudget(value: number): string {
   return value.toLocaleString('ru-RU')
 }
 
+/** Capitalise the first letter — catalogues often ship lowercase Russian titles. */
+export function formatPlaceTitle(title: string): string {
+  const trimmed = title.trim().replace(/\s+/g, ' ')
+  if (!trimmed) return trimmed
+  for (let i = 0; i < trimmed.length; i += 1) {
+    const ch = trimmed[i]!
+    if (/\p{L}/u.test(ch)) {
+      if (ch === ch.toLowerCase() && ch !== ch.toUpperCase()) {
+        return trimmed.slice(0, i) + ch.toUpperCase() + trimmed.slice(i + 1)
+      }
+      return trimmed
+    }
+  }
+  return trimmed
+}
+
 export function formatTravelers(count: number): string {
   const mod10 = count % 10
   const mod100 = count % 100
@@ -17,6 +33,39 @@ export function formatShortDate(iso: string): string {
   const formatted = date.toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'short',
+    year: 'numeric',
   })
-  return formatted.replace('.', '')
+  return formatted.replace(/\./g, '')
+}
+
+export function formatTime(value: string): string {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim())
+  if (!match) return value
+  return `${match[1].padStart(2, '0')}:${match[2]}`
+}
+
+function pad2(n: number) {
+  return String(n).padStart(2, '0')
+}
+
+/** Local datetime from ISO date + HH:mm. */
+export function dateTimeToMs(date: string, time: string): number {
+  const normalized = formatTime(time)
+  return new Date(`${date}T${normalized}:00`).getTime()
+}
+
+export function msToDateTime(ms: number): { date: string; time: string } {
+  const d = new Date(ms)
+  return {
+    date: `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`,
+    time: `${pad2(d.getHours())}:${pad2(d.getMinutes())}`,
+  }
+}
+
+export function shiftDateTime(
+  date: string,
+  time: string,
+  hours: number,
+): { date: string; time: string } {
+  return msToDateTime(dateTimeToMs(date, time) + hours * 3_600_000)
 }

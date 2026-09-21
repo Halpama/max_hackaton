@@ -5,6 +5,11 @@
   display: block;
   background: #d9d9de;
   border-radius: 0 0 22px 22px;
+  animation: heroIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.heroSkeleton {
+  border-radius: 0 0 22px 22px;
 }
 
 .heroFallback {
@@ -21,6 +26,7 @@
   background:
     linear-gradient(160deg, #e8f1ff 0%, #f3f5fa 48%, #eef1f7 100%);
   color: var(--tp-primary-deep);
+  animation: heroIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .heroFallbackGlow {
@@ -59,6 +65,19 @@
   gap: 18px;
   padding: 18px 16px 0;
 }
+
+.contentNoHero {
+  composes: content;
+  padding-top: 20px;
+}
+
+.content > * {
+  animation: contentRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.content > *:nth-child(1) { animation-delay: 80ms; }
+.content > *:nth-child(2) { animation-delay: 150ms; }
+.content > *:nth-child(3) { animation-delay: 220ms; }
 
 .head {
   display: flex;
@@ -126,10 +145,19 @@
 
 .row {
   display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-height: 46px;
+  padding: 8px 0;
+}
+
+.rowMain {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 46px;
+  width: 100%;
 }
 
 .rowLabel {
@@ -137,6 +165,14 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--tp-muted);
+}
+
+.rowNote {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--tp-muted-2, rgba(15, 23, 42, 0.45));
 }
 
 .rowValue {
@@ -167,6 +203,59 @@
   background: var(--tp-divider);
 }
 
+.hours {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hoursLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tp-muted);
+}
+
+.hoursCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 16px;
+  border-radius: var(--tp-radius-lg);
+  background: var(--tp-surface);
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  box-shadow: var(--tp-shadow-sm);
+}
+
+.hoursRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 42px;
+}
+
+.hoursRow + .hoursRow {
+  border-top: 1px solid var(--tp-divider);
+}
+
+.hoursDays {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tp-muted);
+  white-space: nowrap;
+}
+
+.hoursTime {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tp-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .about {
   display: flex;
   flex-direction: column;
@@ -188,4 +277,105 @@
   line-height: 1.5;
   font-weight: 500;
   color: rgba(11, 13, 18, 0.88);
+}
+
+.aboutBody {
+  position: relative;
+}
+
+.aboutTextClamped {
+  composes: aboutText;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.aboutFade {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 56px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--tp-bg) 92%);
+}
+
+.aboutToggle {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tp-primary-deep);
+  cursor: pointer;
+}
+
+.aboutChevron {
+  display: inline-flex;
+  transition: transform 200ms ease;
+}
+
+.aboutChevronUp {
+  composes: aboutChevron;
+  transform: rotate(180deg);
+}
+
+.rowValueWrap {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-align: right;
+}
+
+.source {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tp-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aboutChevron,
+  .aboutChevronUp {
+    transition: none;
+  }
+}
+
+@keyframes heroIn {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes contentRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero,
+  .heroFallback,
+  .content > * {
+    animation: none;
+  }
 }

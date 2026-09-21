@@ -1,4 +1,12 @@
-import type { InterestId, RoutePlan, TripDraft, TripPace, TripSummary } from './types'
+import { shiftDateTime } from '../lib/format'
+import {
+  DEFAULT_TRIP_DURATION_DAYS,
+  type InterestId,
+  type RoutePlan,
+  type TripDraft,
+  type TripPace,
+  type TripSummary,
+} from './types'
 
 export const INTEREST_OPTIONS: Array<{ id: InterestId; label: string }> = [
   { id: 'sights', label: 'Достопримечательности' },
@@ -23,16 +31,35 @@ export const LOADING_STEPS = [
   'Формирование расписания',
 ] as const
 
-export const DEFAULT_TRIP_DRAFT: TripDraft = {
-  destination: 'Санкт-Петербург',
-  startDate: '2026-09-15',
-  endDate: '2026-09-17',
-  budget: 45000,
-  travelers: 2,
-  interests: ['sights', 'museums', 'gastro'],
-  pace: 'medium',
-  findHousing: false,
+function localDateIso(offsetDays = 0): string {
+  const d = new Date()
+  d.setHours(12, 0, 0, 0)
+  d.setDate(d.getDate() + offsetDays)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
+
+/** Fresh draft: arrival = tomorrow, departure = arrival + 3 days. */
+export function createDefaultTripDraft(): TripDraft {
+  const startDate = localDateIso(1)
+  const end = shiftDateTime(startDate, '10:00', DEFAULT_TRIP_DURATION_DAYS * 24)
+  return {
+    destination: '',
+    startDate,
+    startTime: '10:00',
+    endDate: end.date,
+    endTime: '10:00',
+    budget: 0,
+    travelers: 2,
+    interests: ['sights', 'museums', 'gastro'],
+    pace: 'medium',
+    findHousing: false,
+  }
+}
+
+export const DEFAULT_TRIP_DRAFT: TripDraft = createDefaultTripDraft()
 
 export const MOCK_TRIPS: TripSummary[] = [
   {
@@ -49,7 +76,7 @@ export const MOCK_TRIPS: TripSummary[] = [
     dateLabel: '3–5 окт',
     travelersLabel: '1 чел',
     budgetLabel: '~28 000 ₽',
-    status: 'draft',
+    status: 'pending',
   },
   {
     id: 'sochi',
@@ -73,7 +100,7 @@ export const MOCK_ROUTE: RoutePlan = {
       category: 'Музей изобразительного и декоративно-прикладного искусства',
       categoryKind: 'museum',
       city: 'Санкт-Петербург',
-      priceLabel: '800 ₽',
+      priceLabel: '800 ₽ · на 2 чел',
       priceValue: 800,
       durationLabel: '2 часа',
       timeRange: '09:00 – 11:00',
@@ -110,8 +137,8 @@ export const MOCK_ROUTE: RoutePlan = {
       category: 'Гастрономия',
       categoryKind: 'food',
       city: 'Санкт-Петербург',
-      priceLabel: '~500 ₽',
-      priceValue: 500,
+      priceLabel: '~1 000 ₽ · на 2 чел',
+      priceValue: 1000,
       durationLabel: '1 час',
       timeRange: '13:00 – 14:00',
       rating: 4.6,
@@ -189,7 +216,7 @@ export const MOCK_ROUTE: RoutePlan = {
         },
       ],
       transits: [
-        { mode: 'walk', label: 'Пешком 10 мин (Дворцовая площадь)' },
+        { mode: 'walk', label: 'Пешком 10 мин' },
         { mode: 'taxi', label: 'Такси 5 мин' },
       ],
     },

@@ -1,20 +1,34 @@
 .page {
   min-height: 100dvh;
   background: var(--tp-bg);
-  animation: pageIn 360ms ease-out;
+}
+
+.page[data-has-nav='true'] {
+  --tp-nav-offset: calc(78px + var(--tp-safe-bottom));
+}
+
+.page[data-has-nav='false'] {
+  --tp-nav-offset: var(--tp-safe-bottom);
+}
+
+.content {
+  min-height: 100dvh;
+  animation: pageIn 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes pageIn {
   from {
     opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page {
+  .content {
     animation: none;
   }
 }

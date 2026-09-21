@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 4px 16px 28px;
+  padding: 8px 16px 28px;
 }
 
 .summary {
@@ -14,48 +14,72 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  animation: riseIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .summaryTop {
   display: flex;
   justify-content: space-between;
   gap: 16px;
+  font-family: var(--tp-font);
 }
 
-.kicker {
+.kicker,
+.kickerRemain,
+.kickerWarn {
   margin: 0 0 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: -0.01em;
+  line-height: 1;
   color: var(--tp-muted);
 }
 
-.planned {
+.kickerRemain {
+  color: var(--tp-primary-deep);
+  opacity: 0.78;
+}
+
+.kickerWarn {
+  color: #d9480f;
+  opacity: 0.85;
+}
+
+.amount,
+.amountRemain,
+.amountWarn {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
+  color: var(--tp-text);
+}
+
+.amountRemain {
+  color: var(--tp-primary-deep);
+}
+
+.amountWarn {
+  color: #d9480f;
+}
+
+.amountValue {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.amountCurrency {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  opacity: 0.8;
 }
 
 .remainBlock {
   text-align: right;
-}
-
-.remain,
-.remainBad {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-  color: var(--tp-primary);
-}
-
-.remainBad {
-  color: #d9480f;
 }
 
 .barTrack {
@@ -70,7 +94,9 @@
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, #5ab0ff 0%, #007aff 100%);
-  transition: width 0.35s ease;
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: left center;
+  animation: barGrow 0.7s cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
 }
 
 .barFillWarn {
@@ -103,6 +129,8 @@
   letter-spacing: -0.01em;
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(0, 122, 255, 0.22);
+  animation: riseIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .addBtn:active {
@@ -124,13 +152,21 @@
   line-height: 1.45;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 14px;
+  animation: riseIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
 }
 
 .dayGroup {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  animation: riseIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+.dayGroup:nth-child(1) { animation-delay: 120ms; }
+.dayGroup:nth-child(2) { animation-delay: 180ms; }
+.dayGroup:nth-child(3) { animation-delay: 240ms; }
+.dayGroup:nth-child(4) { animation-delay: 300ms; }
+.dayGroup:nth-child(n + 5) { animation-delay: 340ms; }
 
 .dayLabel {
   margin: 0;
@@ -212,6 +248,7 @@
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .entryRemove:hover {
@@ -222,13 +259,14 @@
 .modalRoot {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 1000;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding: 12px;
   background: rgba(15, 23, 42, 0.35);
   backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease both;
 }
 
 .modal {
@@ -237,7 +275,7 @@
   background: #fff;
   padding: 10px 16px 16px;
   box-shadow: 0 -8px 40px rgba(15, 23, 42, 0.18);
-  animation: sheetIn 0.22s ease;
+  animation: sheetIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .modalHandle {
@@ -275,6 +313,7 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .kindActive {
@@ -312,6 +351,7 @@
   font-weight: 500;
   color: var(--tp-text);
   outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .fieldInput:focus {
@@ -334,6 +374,12 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.cancelBtn:active,
+.saveBtn:active {
+  transform: scale(0.985);
 }
 
 .cancelBtn {
@@ -348,14 +394,58 @@
   color: #fff;
 }
 
-@keyframes sheetIn {
+@keyframes riseIn {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes barGrow {
+  from {
+    opacity: 0.35;
+    transform: scaleX(0.35);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .summary,
+  .addBtn,
+  .empty,
+  .dayGroup,
+  .barFill,
+  .barFillWarn,
+  .modalRoot,
+  .modal {
+    animation: none;
   }
 }
 

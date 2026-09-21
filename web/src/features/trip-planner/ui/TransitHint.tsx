@@ -2,6 +2,7 @@ import type { MouseEvent } from 'react'
 import { yandexGoRouteUrl, yandexMapsRouteUrl } from '@/shared/lib/yandex'
 import { getWebApp, isMaxWebApp } from '@/shared/lib/max'
 import type { TransitLeg } from '../model'
+import { WalkIcon as SharedWalkIcon } from './icons'
 import styles from './TransitHint.module.css'
 
 interface TransitHintProps {
@@ -27,18 +28,20 @@ export function TransitHint({ leg, from, to }: TransitHintProps) {
     ? yandexGoRouteUrl(from, to)
     : yandexMapsRouteUrl(from, to, leg.mode)
   const actionLabel = isTaxi ? 'Яндекс Go' : 'Карты'
+  // Older itineraries appended "(Place name)" — strip for display.
+  const label = leg.label.replace(/\s*\([^)]*\)\s*$/, '').trim() || leg.label
 
   return (
     <div className={styles.hint}>
       <div className={styles.rail} aria-hidden>
         <span className={styles.line} />
         <span className={styles.mid}>
-          {isTaxi ? <CarIcon /> : leg.mode === 'metro' ? <MetroIcon /> : <WalkIcon />}
+          {isTaxi ? <CarIcon /> : leg.mode === 'metro' ? <MetroIcon /> : <SharedWalkIcon />}
         </span>
         <span className={styles.line} />
       </div>
       <div className={styles.copy}>
-        <p className={styles.label}>{leg.label}</p>
+        <p className={styles.label}>{label}</p>
         <a
           className={styles.action}
           href={href}
@@ -61,21 +64,6 @@ function ExternalIcon() {
         d="M14 5h5v5M19 5l-9 9M10 5H5v14h14v-5"
         stroke="currentColor"
         strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function WalkIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-      <circle cx="13.5" cy="5" r="2" stroke="currentColor" strokeWidth="1.7" />
-      <path
-        d="M8 21l2.2-6.2L7 12l3-4 3.2 2.4 2.3-1.2L18 11"
-        stroke="currentColor"
-        strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
