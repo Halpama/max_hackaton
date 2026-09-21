@@ -5,6 +5,7 @@ from fastapi import Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError
+from app.core.logging import set_user_context
 from app.core.security import resolve_user
 from app.db.models import Trip, User
 from app.db.repositories import get_or_create_user, get_trip
@@ -18,13 +19,15 @@ async def current_user(
     authorization: Annotated[str | None, Header()] = None,
 ) -> User:
     auth = resolve_user(authorization)
-    return await get_or_create_user(
+    user = await get_or_create_user(
         session,
         auth.max_user_id,
         username=auth.username,
         first_name=auth.first_name,
         last_name=auth.last_name,
     )
+    set_user_context(user.id)
+    return user
 
 
 CurrentUser = Annotated[User, Depends(current_user)]

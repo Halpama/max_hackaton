@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
@@ -8,7 +8,14 @@ from app.bot.lifecycle import start_bot, stop_bot
 from app.cache.redis import close_redis, get_redis
 from app.core.config import settings
 from app.core.errors import register_error_handlers
-from app.core.logging import get_logger, setup_logging
+from app.core.logging import (
+    clear_request_context,
+    get_logger,
+    monotonic_seconds,
+    new_request_id,
+    set_request_context,
+    setup_logging,
+)
 from app.db.session import dispose_engine
 
 setup_logging()
@@ -42,6 +49,42 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or new_request_id()
+    set_request_context(request_id)
+    request.state.request_id = request_id
+    started = monotonic_seconds()
+    response = None
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as exc:
+        logger.exception(
+            "Unhandled request exception",
+            extra={
+                "endpoint": request.url.path,
+                "http_method": request.method,
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+            },
+        )
+        raise
+    finally:
+        logger.info(
+            "HTTP request completed",
+            extra={
+                "endpoint": request.url.path,
+                "http_method": request.method,
+                "status_code": response.status_code if response is not None else 500,
+                "response_time_ms": round((monotonic_seconds() - started) * 1000, 2),
+            },
+        )
+        if response is not None:
+            response.headers["X-Request-ID"] = request_id
+        clear_request_context()
 
 app.add_middleware(
     CORSMiddleware,

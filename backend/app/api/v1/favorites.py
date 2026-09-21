@@ -7,6 +7,7 @@ from app.db.repositories import (
     list_favorite_ids,
     remove_favorite,
 )
+from app.services.audit import record_event
 from app.schemas.trip import Place
 
 router = APIRouter(prefix="/favorites", tags=["favorites"])
@@ -30,8 +31,14 @@ async def get_favorites(session: DbSession, user: CurrentUser) -> list[Place]:
 @router.put("/{place_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def put_favorite(place_id: str, session: DbSession, user: CurrentUser) -> None:
     await add_favorite(session, user.id, place_id)
+    await record_event(
+        "favorite_added", user_id=user.id, session=session, payload={"place_id": place_id}
+    )
 
 
 @router.delete("/{place_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_favorite(place_id: str, session: DbSession, user: CurrentUser) -> None:
     await remove_favorite(session, user.id, place_id)
+    await record_event(
+        "favorite_removed", user_id=user.id, session=session, payload={"place_id": place_id}
+    )

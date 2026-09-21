@@ -139,3 +139,27 @@ class LedgerEntry(Base):
 
 
 Index("ix_ledger_trip_date", LedgerEntry.trip_id, LedgerEntry.entry_date)
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    event_type: Mapped[str] = mapped_column(String(64), index=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    trip_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("trips.id", ondelete="SET NULL"), index=True
+    )
+    generation_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
+    request_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    stage: Mapped[str | None] = mapped_column(String(32))
+    status: Mapped[str | None] = mapped_column(String(16))
+    duration_ms: Mapped[float | None] = mapped_column()
+    error_type: Mapped[str | None] = mapped_column(String(128))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    payload: Mapped[dict | None] = mapped_column(JsonColumn)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )

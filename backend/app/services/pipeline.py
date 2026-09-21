@@ -4,6 +4,7 @@ Stage keys match LOADING_STEPS in the frontend, so the loader screen advances in
 step with the real work instead of a timer.
 """
 import uuid
+from time import perf_counter
 from datetime import datetime, timedelta
 
 import orjson
@@ -30,6 +31,7 @@ from app.schemas.trip import (
     TripDraft,
 )
 from app.services import budget as budget_service
+from app.services.audit import record_event
 from app.services import formatting, llm, opening_hours, progress, transit
 from app.services.places import PlaceCandidate, balance_food, collect_candidates
 from app.services.scheduler import (
@@ -120,17 +122,41 @@ async def build_route(
     trip_id: uuid.UUID,
     *,
     emit: bool = True,
+    generation_id: uuid.UUID | None = None,
+    user_id: int | None = None,
+    stage_context: dict[str, str | None] | None = None,
 ) -> RoutePlan:
     """Run the pipeline and return the finished plan."""
 
     async def stage_start(key: str) -> None:
+        if stage_context is not None:
+            stage_context["key"] = key
+            stage_context["started"] = str(perf_counter())
         if emit:
             await _emit(trip_id, key, "active")
         await _set_status(trip_id, stage=key)
+        await record_event(
+            "stage_started",
+            user_id=user_id,
+            trip_id=trip_id,
+            generation_id=generation_id,
+            stage=key,
+            status="started",
+        )
 
     async def stage_done(key: str) -> None:
         if emit:
             await _emit(trip_id, key, "done")
+        started = float(stage_context["started"]) if stage_context and stage_context.get("started") else None
+        await record_event(
+            "stage_completed",
+            user_id=user_id,
+            trip_id=trip_id,
+            generation_id=generation_id,
+            stage=key,
+            status="completed",
+            duration_ms=round((perf_counter() - started) * 1000, 2) if started else None,
+        )
 
     start_at, end_at = parse_draft_bounds(draft)
     slots = build_day_slots(start_at, end_at)
@@ -295,13 +321,45 @@ async def build_route(
 
 async def generate_trip(trip_id: uuid.UUID, draft: TripDraft) -> None:
     """Background entrypoint: generate, persist, and announce the result."""
+    generation_id = uuid.uuid4()
+    started = perf_counter()
+    stage_context: dict[str, str | None] = {"key": None, "started": None}
+    async with get_session_factory()() as session:
+        trip = await session.scalar(select(Trip).where(Trip.id == trip_id))
+        user_id = trip.user_id if trip is not None else None
+    safe_parameters = {
+        "destination": draft.destination,
+        "start_date": draft.start_date,
+        "start_time": draft.start_time,
+        "end_date": draft.end_date,
+        "end_time": draft.end_time,
+        "budget": draft.budget,
+        "travelers": draft.travelers,
+        "interests": list(draft.interests),
+        "pace": draft.pace,
+        "find_housing": draft.find_housing,
+    }
+    await record_event(
+        "trip_generation_started",
+        user_id=user_id,
+        trip_id=trip_id,
+        generation_id=generation_id,
+        status="started",
+        payload={"parameters": safe_parameters},
+    )
     await _set_status(trip_id, status="running")
 
     try:
         cache_key = plan_cache_key(draft)
 
         async def produce() -> dict:
-            route = await build_route(draft, trip_id)
+            route = await build_route(
+                draft,
+                trip_id,
+                generation_id=generation_id,
+                user_id=user_id,
+                stage_context=stage_context,
+            )
             return route.model_dump(by_alias=True)
 
         payload = await cached_json(cache_key, keys.TTL_PLAN, produce)
@@ -321,17 +379,66 @@ async def generate_trip(trip_id: uuid.UUID, draft: TripDraft) -> None:
         history = await progress.history(trip_id)
         if not any(event.get("type") == "stage" for event in history):
             for key in STAGES:
+                await record_event(
+                    "stage_started",
+                    user_id=user_id,
+                    trip_id=trip_id,
+                    generation_id=generation_id,
+                    stage=key,
+                    status="started",
+                    payload={"cache_hit": True},
+                )
                 await _emit(trip_id, key, "done")
+                await record_event(
+                    "stage_completed",
+                    user_id=user_id,
+                    trip_id=trip_id,
+                    generation_id=generation_id,
+                    stage=key,
+                    status="completed",
+                    duration_ms=0,
+                    payload={"cache_hit": True},
+                )
 
         await progress.publish(
             trip_id,
             DoneEvent(trip_id=str(trip_id), route=route).model_dump(by_alias=True),
         )
         logger.info("Trip %s generated: %d days", trip_id, len(route.days))
+        await record_event(
+            "trip_generation_completed",
+            user_id=user_id,
+            trip_id=trip_id,
+            generation_id=generation_id,
+            status="completed",
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+            payload={"days": len(route.days)},
+        )
 
     except Exception as exc:  # noqa: BLE001 - the failure must reach the client
         message = exc.message if isinstance(exc, AppError) else "Не удалось построить маршрут"
         logger.exception("Trip %s generation failed", trip_id)
+        if stage_context.get("key"):
+            stage_started = float(stage_context["started"]) if stage_context.get("started") else None
+            await record_event(
+                "stage_failed",
+                user_id=user_id,
+                trip_id=trip_id,
+                generation_id=generation_id,
+                stage=stage_context["key"],
+                status="failed",
+                duration_ms=round((perf_counter() - stage_started) * 1000, 2) if stage_started else None,
+                error=exc,
+            )
+        await record_event(
+            "trip_generation_failed",
+            user_id=user_id,
+            trip_id=trip_id,
+            generation_id=generation_id,
+            status="failed",
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+            error=exc,
+        )
         await _set_status(trip_id, status="failed", error=str(exc))
         await progress.publish(
             trip_id,
