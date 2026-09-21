@@ -1,45 +1,23 @@
 name: Deploy to VDS
 
-# GitHub-hosted runners cannot open SSH to this Timeweb VDS (inbound timed out).
-# Deploy is pull-based on the server (scripts/vds-pull-deploy.sh + systemd timer).
-# This workflow only verifies the stand after main moves.
+# Real deploy is pull-based on the VDS:
+#   max-hackaton-deploy.timer → scripts/vds-pull-deploy.sh
+# GitHub-hosted runners cannot reach this Timeweb box (SSH/HTTPS time out),
+# so this workflow only records that main moved; the server picks it up ~1 min.
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-concurrency:
-  group: deploy-vds
-  cancel-in-progress: true
-
 jobs:
-  verify-stand:
+  note-pull-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
-      - name: Wait for VDS pull-deploy
-        env:
-          STAND_HEALTH_URL: ${{ secrets.STAND_HEALTH_URL }}
-          EXPECT_SHA: ${{ github.sha }}
+      - name: Deploy is handled on the VDS
         run: |
           set -euo pipefail
-          URL="${STAND_HEALTH_URL:-https://api.2-rist.ru/health}"
-          echo "Waiting for stand health: $URL"
-          echo "Commit on main: $EXPECT_SHA"
-          ok=0
-          for i in $(seq 1 30); do
-            if curl -fsS --max-time 15 "$URL" >/tmp/health.json; then
-              echo "attempt $i: $(cat /tmp/health.json)"
-              ok=1
-              break
-            fi
-            echo "attempt $i: not ready yet"
-            sleep 10
-          done
-          if [ "$ok" != 1 ]; then
-            echo "Stand health check failed. On VDS ensure:"
-            echo "  systemctl status max-hackaton-deploy.timer"
-            echo "  journalctl -u max-hackaton-deploy.service -n 50"
-            exit 1
-          fi
+          echo "main SHA: ${{ github.sha }}"
+          echo "VDS timer pulls origin/main about every 60s and runs docker compose up -d --build."
+          echo "Check on server: systemctl status max-hackaton-deploy.timer"
+          echo "Health (from your network): https://api.2-rist.ru/health"
