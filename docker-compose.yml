@@ -91,6 +91,17 @@ services:
       timeout: 5s
       retries: 5
 
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./infra/searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8081/
+
 volumes:
   postgres-data:
   redis-data:
@@ -102,3 +113,4 @@ networks:
       config:
         - subnet: 172.28.0.0/16
         - subnet: fd00:cafe:1::/64
+
