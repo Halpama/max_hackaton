@@ -114,7 +114,10 @@ class GigaChatClient:
         if json_response:
             body["function_call"] = "none"
 
-        cache_key = keys.gigachat_completion(settings.gigachat_model, orjson.dumps(body))
+        cache_key = keys.gigachat_completion(
+            settings.gigachat_model,
+            orjson.dumps(body),
+        )
 
         async def produce() -> str:
             token = await self._token()
@@ -128,6 +131,7 @@ class GigaChatClient:
                 },
                 json=body,
             )
+
             if response.status_code == 401:
                 # Token expired early — drop it and retry once with a fresh one.
                 try:
@@ -135,6 +139,7 @@ class GigaChatClient:
                     await redis.delete(keys.gigachat_token())
                 except Exception:  # noqa: BLE001
                     pass
+
                 token = await self._token()
                 response = await client.post(
                     API_URL,
@@ -148,16 +153,83 @@ class GigaChatClient:
 
             if response.status_code != 200:
                 raise UpstreamError(
-                    f"GigaChat completion failed: {response.status_code} {response.text[:300]}"
+                    f"GigaChat completion failed: "
+                    f"{response.status_code} {response.text[:300]}"
                 )
 
             payload = response.json()
             choices = payload.get("choices") or []
+
             if not choices:
                 raise UpstreamError("GigaChat returned no choices")
+
             return choices[0].get("message", {}).get("content", "")
 
-        return await cached_json(cache_key, keys.TTL_COMPLETION, produce)
+        return await cached_json(
+            cache_key,
+            keys.TTL_COMPLETION,
+            produce,
+        )
+
+    async def complete_with_tools(
+        self,
+        messages: list[dict],
+        functions: list[dict],
+    ) -> dict:
+        """Run a chat completion with function calling."""
+        body: dict[str, object] = {
+            "model": settings.gigachat_model,
+            "messages": messages,
+            "functions": functions,
+            "temperature": 0.4,
+            "max_tokens": 2048,
+        }
+
+        token = await self._token()
+        client = await self._http()
+
+        response = await client.post(
+            API_URL,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            json=body,
+        )
+
+        if response.status_code == 401:
+            try:
+                redis = await get_redis()
+                await redis.delete(keys.gigachat_token())
+            except Exception:  # noqa: BLE001
+                pass
+
+            token = await self._token()
+
+            response = await client.post(
+                API_URL,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                json=body,
+            )
+
+        if response.status_code != 200:
+            raise UpstreamError(
+                f"GigaChat completion with tools failed: "
+                f"{response.status_code} {response.text[:300]}"
+            )
+
+        payload = response.json()
+        choices = payload.get("choices") or []
+
+        if not choices:
+            raise UpstreamError("GigaChat returned no choices")
+
+        return payload
 
 
 gigachat = GigaChatClient()
