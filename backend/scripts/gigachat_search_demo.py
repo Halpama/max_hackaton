@@ -48,7 +48,7 @@ async def run(question: str) -> None:
 
             print(f"Поисковый запрос: {query}")
 
-            results = search(query)
+            results = await search(query)
 
             if not results:
                 print("Поиск не дал результатов. Честный отказ.")
