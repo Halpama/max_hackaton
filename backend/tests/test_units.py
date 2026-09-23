@@ -175,6 +175,30 @@ def test_prettify_title(raw: str, expected: str):
     assert prettify_title(raw) == expected
 
 
+def test_bot_planner_keyboard_uses_bot_identity_not_spa_url():
+    from app.bot.client import MaxBotClient
+
+    client = MaxBotClient()
+    client._me = {"user_id": 42, "username": "trip_planner_bot", "name": "Trip"}
+    rows = client.planner_keyboard()
+    open_app = rows[0][0]
+    assert open_app["type"] == "open_app"
+    assert open_app["web_app"] == "trip_planner_bot"
+    assert open_app["contact_id"] == 42
+    assert open_app["payload"] == "planner"
+    # Must not put the Vercel SPA URL into open_app.web_app
+    assert not str(open_app.get("web_app", "")).startswith("http")
+    assert client.max_deeplink() == "https://max.ru/trip_planner_bot?startapp"
+
+
+def test_bot_command_normalization():
+    from app.bot.handlers import _normalize_command
+
+    assert _normalize_command("/start@trip_bot") == "/start"
+    assert _normalize_command("@trip_bot /help") == "/help"
+    assert _normalize_command("  Помощь ") == "помощь"
+
+
 def test_metro_is_only_suggested_where_it_exists():
     assert has_metro("Санкт-Петербург")
     assert has_metro("Нижний Новгород")

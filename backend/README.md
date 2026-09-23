@@ -178,9 +178,9 @@ docker compose exec redis redis-cli --scan --pattern 'trip:plan:*' | \
 
 ## MAX-бот
 
-Код в `app/bot/`: клиент `platform-api2.max.ru` (заголовок `Authorization`),
-handlers (`/start`, `/help`, `/about` + кнопка `open_app`), webhook и long
-polling. Поднимается из lifespan FastAPI.
+Код в `app/bot/`: клиент `platform-api2.max.ru` (заголовок `Authorization` +
+сертификаты Минцифры), handlers (`/start`, `/help`, `/about` + кнопка
+`open_app`), webhook и long polling. Поднимается из lifespan FastAPI.
 
 | Переменная | Смысл |
 | ---------- | ----- |
@@ -189,12 +189,31 @@ polling. Поднимается из lifespan FastAPI.
 | `MAX_BOT_MODE` | `auto` \| `webhook` \| `polling` \| `off` |
 | `MAX_BOT_WEBHOOK_URL` | публичный `https://…/api/v1/bot/webhook` |
 | `MAX_BOT_WEBHOOK_SECRET` | опционально, заголовок `X-Max-Bot-Api-Secret` |
-| `MAX_WEBAPP_URL` | URL мини-приложения для кнопки |
+| `MAX_WEBAPP_URL` | SPA URL для кнопки «в браузере» |
+
+`open_app` открывает мини-приложение, **привязанное к боту в кабинете**
+(Расширенные настройки → ссылка). В кнопку уходят `web_app=<username>` и
+`contact_id=<bot user_id>` из `GET /me`, а не URL Vercel.
 
 `auto`: если задан `MAX_BOT_WEBHOOK_URL` — регистрирует webhook, иначе long
 polling (удобно локально без туннеля). Из корня репо: `./trip bot on`.
 
-Эндпоинты: `GET /api/v1/bot/status`, `POST /api/v1/bot/webhook`.
+Эндпоинты: `GET /api/v1/bot/status`, `POST /api/v1/bot/invite`,
+`POST /api/v1/bot/webhook`.
+
+Проверка:
+
+```bash
+# в backend/.env: MAX_BOT_ENABLED=true, MAX_BOT_MODE=polling
+docker compose up -d api
+curl -s http://localhost:8000/api/v1/bot/status | jq .
+cd backend && .venv/bin/python scripts/bot_smoke.py
+# опционально отправить себе клавиатуру:
+# .venv/bin/python scripts/bot_smoke.py --invite-user <ваш_max_user_id>
+```
+
+В чате с ботом: `/start` → «Открыть планировщик» (внутри MAX) или deeplink
+`https://max.ru/<bot_username>?startapp`.
 
 ## GigaChat и TLS
 
