@@ -20,3 +20,7 @@ export const IS_DEV = import.meta.env.DEV
  * Only when explicitly enabled — empty API_BASE_URL means same-origin proxy.
  */
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS?.trim() === 'true'
+
+/** Free Yandex Maps Tiles API key — Russian basemap for MapLibre. */
+export const YANDEX_MAPS_TILES_KEY =
+  import.meta.env.VITE_YANDEX_MAPS_TILES_KEY?.trim() || ''
