@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     max_bot_webhook_url: str = ""
     #: auto — webhook if URL set, otherwise long polling; webhook | polling | off.
     max_bot_mode: Literal["auto", "webhook", "polling", "off"] = "auto"
-    max_webapp_url: str = "https://max-hackaton.vercel.app"
+    max_webapp_url: str = "https://2-rist.ru"
 
     @property
     def cors_origin_list(self) -> list[str]:
