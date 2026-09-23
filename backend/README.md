@@ -193,7 +193,20 @@ docker compose exec redis redis-cli --scan --pattern 'trip:plan:*' | \
 
 `open_app` открывает мини-приложение, **привязанное к боту в кабинете**
 (Расширенные настройки → ссылка). В кнопку уходят `web_app=<username>` и
-`contact_id=<bot user_id>` из `GET /me`, а не URL Vercel.
+`contact_id=<bot user_id>` из `GET /me`, а не URL SPA.
+
+Если от организаторов есть **только токен** бота:
+1. `MAX_BOT_TOKEN=…`, `MAX_BOT_ENABLED=true`, `MAX_BOT_MODE=polling`
+2. Перезапуск API — бот начнёт long polling (webhook не нужен)
+3. В чате `/start` → кнопки работают
+4. Чтобы `open_app` открыл именно `https://2-rist.ru`, в кабинете MAX у
+   этого бота должна быть прописана ссылка мини-приложения. Без доступа в
+   кабинет кнопку «в MAX» настроит тот, кто создал бота; «Открыть в браузере»
+   уже ведёт на `MAX_WEBAPP_URL`.
+
+Прод-стенд: `MAX_WEBAPP_URL=https://2-rist.ru`, webhook (когда есть HTTPS):
+`MAX_BOT_WEBHOOK_URL=https://api.2-rist.ru/api/v1/bot/webhook`,
+`MAX_BOT_MODE=auto` или `webhook`.
 
 `auto`: если задан `MAX_BOT_WEBHOOK_URL` — регистрирует webhook, иначе long
 polling (удобно локально без туннеля). Из корня репо: `./trip bot on`.
