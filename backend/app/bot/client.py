@@ -11,6 +11,7 @@ import httpx
 from app.core.config import settings
 from app.core.errors import ConfigurationError, UpstreamError
 from app.core.logging import get_logger
+from app.core.ssl_ru import russian_trusted_ssl_context
 
 logger = get_logger(__name__)
 
@@ -28,6 +29,7 @@ DEFAULT_UPDATE_TYPES = [
 class MaxBotClient:
     def __init__(self) -> None:
         self._client: httpx.AsyncClient | None = None
+        self._me: dict | None = None
 
     async def _http(self) -> httpx.AsyncClient:
         if not settings.max_bot_token:
@@ -36,6 +38,7 @@ class MaxBotClient:
             self._client = httpx.AsyncClient(
                 base_url=BASE_URL,
                 timeout=httpx.Timeout(30.0, connect=10.0),
+                verify=russian_trusted_ssl_context(),
                 headers={
                     "Authorization": settings.max_bot_token,
                     "Content-Type": "application/json",
@@ -47,6 +50,7 @@ class MaxBotClient:
         if self._client is not None:
             await self._client.aclose()
             self._client = None
+        self._me = None
 
     async def _request(self, method: str, path: str, **kwargs) -> dict | list:
         client = await self._http()
@@ -59,9 +63,39 @@ class MaxBotClient:
             return {}
         return response.json()
 
-    async def get_me(self) -> dict:
+    async def get_me(self, *, force: bool = False) -> dict:
+        if self._me is not None and not force:
+            return self._me
         data = await self._request("GET", "/me")
-        return data if isinstance(data, dict) else {}
+        self._me = data if isinstance(data, dict) else {}
+        return self._me
+
+    @property
+    def bot_user_id(self) -> int | None:
+        if not self._me:
+            return None
+        raw = self._me.get("user_id")
+        if raw is None:
+            raw = self._me.get("userId")
+        try:
+            return int(raw) if raw is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def bot_username(self) -> str | None:
+        if not self._me:
+            return None
+        name = self._me.get("username")
+        return str(name).lstrip("@") if name else None
+
+    def max_deeplink(self, *, startapp: bool = True) -> str | None:
+        """In-MAX link that opens the mini-app bound to this bot in the cabinet."""
+        username = self.bot_username
+        if not username:
+            return None
+        base = f"https://max.ru/{username}"
+        return f"{base}?startapp" if startapp else base
 
     async def send_message(
         self,
@@ -91,31 +125,64 @@ class MaxBotClient:
         return data if isinstance(data, dict) else {}
 
     def planner_keyboard(self) -> list:
-        """Inline keyboard that opens the mini-app inside MAX, with a browser fallback."""
+        """Inline keyboard: open mini-app inside MAX + browser fallback.
+
+        Per MAX Bot API, `open_app.web_app` is the bot username / bot link — not
+        the SPA URL. The mini-app URL itself is configured in the partner cabinet
+        (Расширенные настройки). `contact_id` is this bot's user_id from /me.
+        """
         open_app: dict[str, object] = {
             "type": "open_app",
             "text": "Открыть планировщик",
             "payload": "planner",
         }
-        # web_app is optional when the mini-app is bound to this bot in the
-        # cabinet; when set, MAX opens that URL inside the messenger shell.
-        if settings.max_webapp_url:
-            open_app["web_app"] = settings.max_webapp_url
+        if self.bot_username:
+            open_app["web_app"] = self.bot_username
+        if self.bot_user_id is not None:
+            open_app["contact_id"] = self.bot_user_id
 
-        row_primary = [open_app]
-        row_fallback = [
-            {
-                "type": "link",
-                "text": "Открыть в браузере",
-                "url": settings.max_webapp_url,
-            }
-        ]
-        row_help = [{"type": "message", "text": "Помощь"}]
-        return [row_primary, row_fallback, row_help]
+        rows: list[list[dict[str, object]]] = [[open_app]]
+
+        deeplink = self.max_deeplink(startapp=True)
+        if deeplink:
+            rows.append(
+                [
+                    {
+                        "type": "link",
+                        "text": "Открыть в MAX",
+                        "url": deeplink,
+                    }
+                ]
+            )
+
+        if settings.max_webapp_url:
+            rows.append(
+                [
+                    {
+                        "type": "link",
+                        "text": "Открыть в браузере",
+                        "url": settings.max_webapp_url,
+                    }
+                ]
+            )
+
+        rows.append(
+            [
+                {"type": "callback", "text": "Помощь", "payload": "/help"},
+                {"type": "callback", "text": "О боте", "payload": "/about"},
+            ]
+        )
+        return rows
 
     async def send_planner_invite(
         self, *, chat_id: int | None = None, user_id: int | None = None, text: str
     ) -> dict:
+        # Need /me so open_app carries contact_id / username.
+        try:
+            await self.get_me()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Could not refresh MAX /me before invite: %s", exc)
+
         attachments = [
             {
                 "type": "inline_keyboard",

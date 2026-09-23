@@ -23,9 +23,14 @@ async def start_bot() -> None:
         return
 
     try:
-        me = await max_bot.get_me()
+        me = await max_bot.get_me(force=True)
         name = me.get("name") or me.get("username") or me.get("user_id") or "?"
-        logger.info("MAX bot online as %s", name)
+        logger.info(
+            "MAX bot online as %s (@%s id=%s)",
+            name,
+            max_bot.bot_username or "?",
+            max_bot.bot_user_id,
+        )
     except Exception as exc:  # noqa: BLE001
         logger.warning("MAX /me failed (%s) — continuing anyway", exc)
 

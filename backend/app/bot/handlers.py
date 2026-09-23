@@ -40,6 +40,17 @@ ABOUT_TRIGGERS = {"/about", "о боте", "about"}
 START_TRIGGERS = {"/start", "start", "начать", "старт"}
 
 
+def _normalize_command(text: str) -> str:
+    """Lowercase + strip @bot mention and /command@bot suffixes."""
+    value = (text or "").strip().lower()
+    if value.startswith("@") and " " in value:
+        value = value.split(" ", 1)[-1].strip()
+    # "/start@my_bot" → "/start"
+    if value.startswith("/") and "@" in value:
+        value = value.split("@", 1)[0]
+    return value
+
+
 def extract_chat_id(update: dict) -> int | None:
     """Best-effort chat id across bot_started / message / callback shapes."""
     for key in ("chat_id", "chatId"):
@@ -132,22 +143,27 @@ async def handle_update(update: dict) -> None:
             return
 
         if update_type == "message_callback":
-            payload = str((update.get("callback") or {}).get("payload") or "").strip().lower()
+            payload = _normalize_command(
+                str((update.get("callback") or {}).get("payload") or "")
+            )
             if payload in HELP_TRIGGERS or payload == "/help":
                 await _reply(update, HELP)
-            elif payload in ABOUT_TRIGGERS:
+            elif payload in ABOUT_TRIGGERS or payload == "/about":
                 await _reply(update, ABOUT, with_keyboard=False)
+            elif payload in {"planner", "open", "open_app"}:
+                await _reply(update, WELCOME)
             else:
                 await _reply(update, WELCOME)
             return
 
         if update_type == "message_created":
-            text = extract_text(update).lower()
-            # Strip bot mention prefixes like "@trip_bot /start".
-            if " " in text and text.startswith("@"):
-                text = text.split(" ", 1)[-1].strip()
+            text = _normalize_command(extract_text(update))
 
-            if not text or any(text.startswith(t) for t in START_TRIGGERS) or text in START_TRIGGERS:
+            if (
+                not text
+                or text in START_TRIGGERS
+                or any(text.startswith(t) for t in START_TRIGGERS)
+            ):
                 await _reply(update, WELCOME)
             elif text in HELP_TRIGGERS or text.startswith("/help"):
                 await _reply(update, HELP)
