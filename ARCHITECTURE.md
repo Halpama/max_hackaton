@@ -19,6 +19,7 @@ flowchart TB
     API["api — FastAPI"]
     PG[(Postgres)]
     RD[(Redis)]
+    SX[SearXNG]
   end
 
   subgraph External["Внешние API"]
@@ -26,7 +27,7 @@ flowchart TB
     OTM[OpenTripMap]
     KD[KudaGo]
     ORS[openrouteservice / OSRM]
-    WM[Open-Meteo]
+    OM[Open-Meteo<br/>погода + геокодинг]
     WP[Wikipedia]
   end
 
@@ -34,16 +35,22 @@ flowchart TB
   WEB -->|"REST + SSE"| API
   API --> PG
   API --> RD
-  API --> GC & OTM & KD & ORS & WM
+  API --> SX
+  API --> GC & OTM & KD & ORS & OM
   WEB -.->|"превью городов"| WP
+  WEB -.->|"Яндекс.Карты / Go"| YX[Yandex Maps / Taxi]
 ```
 
 | Контейнер | Роль |
 | --------- | ---- |
 | `web` | собранный SPA за nginx |
 | `api` | FastAPI, миграции Alembic, uvicorn |
-| `postgres` | поездки, места, избранное, ledger |
+| `postgres` | поездки, места, избранное, packing / ledger |
 | `redis` | кеш внешних ответов, pub/sub прогресса SSE, квоты |
+| `searxng` | локальный веб-поиск для tool-calling GigaChat (demo / инфра) |
+
+SearXNG по умолчанию слушает только `127.0.0.1:8081` на хосте; API ходит к нему
+по внутренней сети (`SEARXNG_URL=http://searxng:8080`).
 
 ---
 
@@ -57,7 +64,7 @@ flowchart LR
   end
 
   subgraph API["api/"]
-    V1["v1/trips · places<br/>favorites · trip_state"]
+    V1["v1/trips · places<br/>favorites · trip_state · geo"]
     DEPS[deps — auth]
   end
 
@@ -78,6 +85,8 @@ flowchart LR
     C_KD[kudago]
     C_ORS[osrm + ORS]
     C_WX[weather]
+    C_GEO[geocoding]
+    C_SX[searxng]
   end
 
   subgraph Infra
@@ -92,11 +101,14 @@ flowchart LR
   V1 --> DEPS
   V1 --> PIPE
   V1 --> DB
+  V1 --> C_GEO
   PIPE --> PL & LLM & TR & BD & SCH & PR & FMT
   PL --> C_OTM & C_KD
   LLM --> C_GC
   TR --> C_ORS
   PIPE --> C_WX
+  PIPE --> C_GEO
+  C_GC -.->|"complete_with_tools"| C_SX
   Clients --> CACHE
   PIPE --> CACHE
   PIPE --> DB
@@ -109,16 +121,19 @@ flowchart LR
 | Модуль | Что делает |
 | ------ | ---------- |
 | `app/main.py` | lifespan, CORS, роутеры, health |
-| `app/api/v1/` | HTTP: создание поездки, SSE-стрим, места, избранное, локальный state |
+| `app/api/v1/` | HTTP: поездки, SSE, места, избранное, state, подсказки городов |
 | `app/api/deps.py` | пользователь из MAX `initData` (или `AUTH_MODE=dev`) |
 | `app/services/pipeline.py` | оркестратор 5 стадий генерации маршрута |
 | `app/services/places.py` | кандидаты: KudaGo → OpenTripMap, дедуп, категории |
 | `app/services/llm.py` | нормализация города и отбор мест через GigaChat |
 | `app/services/scheduler.py` | раскладка мест по дням с учётом темпа |
 | `app/services/transit.py` | ноги между точками, режим пешком/метро/такси |
-| `app/services/budget.py` | оценка цен + флаг `priceEstimated` |
+| `app/services/budget.py` | оценка цен + флаг `priceEstimated`; `0 ₽` = только бесплатное |
 | `app/services/progress.py` | публикация стадий в Redis pub/sub |
+| `app/clients/geocoding.py` | подсказки городов и coords через Open-Meteo (RU-first) |
+| `app/clients/searxng.py` | JSON-поиск для `web_search` tool GigaChat |
 | `app/clients/*` | HTTP-клиенты внешних API |
+| `app/function_schema.py` | схема function calling `web_search` |
 | `app/cache/` | ключи, TTL, декоратор `cached_json`, квота OTM |
 | `app/db/` | модели, сессия, репозитории |
 | `app/schemas/` | контракт с фронтом (camelCase) |
@@ -147,15 +162,16 @@ sequenceDiagram
   API->>R: SUBSCRIBE trip:{id}:progress
 
   S->>R: stage analyze
-  S->>Ext: GigaChat — город / радиус
+  S->>Ext: GigaChat — city / radius
   S->>R: stage places
+  S->>Ext: Open-Meteo geocode RU → центр города
   S->>Ext: KudaGo + OpenTripMap
   S->>Ext: GigaChat — курация
   S->>R: stage transit
   S->>Ext: ORS / OSRM
   S->>R: stage budget
   S->>R: stage schedule
-  S->>Ext: Open-Meteo (если даты в горизонте)
+  S->>Ext: Open-Meteo weather (если даты в горизонте)
   S->>API: persist RoutePlan → Postgres
   S->>R: event done
   R-->>UI: SSE done + route
@@ -170,11 +186,28 @@ flowchart TD
   E --> F[RoutePlan]
 
   A -.- A1[GigaChat: city, radius]
-  B -.- B1[KudaGo / OTM + LLM curate]
+  B -.- B1[RU geocode → KudaGo / OTM + LLM]
   C -.- C1[ORS matrix/legs]
-  D -.- D1[оценка цен]
+  D -.- D1[цены; 0₽ → free-only]
   E -.- E1[дни + погода + Place map]
 ```
+
+### Геокодинг центра города
+
+Автокомплит (`GET /api/v1/geo/cities`) и пайплайн используют **один источник** —
+Open-Meteo Geocoding с `countryCode=RU` и фильтром «trip-worthy» городов
+(админцентры / население). Координаты вне приблизительного bbox России
+отбрасываются, чтобы латинский `geoQuery` от LLM не уводил маршрут в Африку
+через OpenTripMap `geoname`. OTM geoname — запасной вариант после Open-Meteo.
+
+### Бюджет
+
+| Ввод | Поведение |
+| ---- | --------- |
+| `budget > 0` | типичные цены по категории масштабируются под бюджет |
+| `budget = 0` | только бесплатные места (парки, площади, памятники); лейбл `0 ₽` |
+
+`0` — осознанный «бесплатный» режим, а не «бюджет не указан».
 
 ---
 
@@ -211,6 +244,7 @@ flowchart TB
     CFG[config — routes, env]
     MAXLIB[lib/max — WebApp]
     MAP[lib/maplibre]
+    YND[lib/yandex — Maps / Go]
   end
 
   PROVIDERS --> Pages
@@ -227,11 +261,11 @@ flowchart TB
 | Страница | Модуль | Роль |
 | -------- | ------ | ---- |
 | `/` | `pages/home` | список поездок + избранное |
-| `/trips/new` | `pages/new-trip` | черновик: город, даты, бюджет |
+| `/trips/new` | `pages/new-trip` | черновик: город, даты (≥ сегодня), бюджет |
 | `/preferences` | `pages/preferences` | интересы, темп → `POST /trips` |
-| `/loading` | `pages/route-loading` | SSE-прогресс генерации |
-| `/route` | `pages/ready-route` | дни, карта, сборы, бюджет |
-| `/places/:id` | `pages/location-detail` | карточка места |
+| `/loading` | `pages/route-loading` | SSE-прогресс; при ошибке — retry **или** на главную |
+| `/route?tripId=&day=` | `pages/ready-route` | дни, карта, сборы, бюджет; день в query |
+| `/places/:id` | `pages/location-detail` | карточка; «На карте» → пин по координатам |
 
 ### Внутри `features/trip-planner`
 
@@ -239,8 +273,15 @@ flowchart TB
 | ---- | ------- | ---- |
 | `model/` | `TripPlannerProvider`, `types`, `useTripLocalState` | глобальный стейт поездки + локальный packing/ledger |
 | `api/` | `trips.ts`, `places.ts`, `state.ts` | типизированные вызовы бэка |
-| `ui/` | `DayTabs`, `DayWeatherBadge`, `PlaceDetails`, `SoftImage`… | переиспользуемые виджеты |
+| `ui/` | `DayTabs`, `CityField`, `PlaceDetails`, `StatusView`… | переиспользуемые виджеты |
 | `lib/` | `openingHours`, `cityImage`, `format` | чистые хелперы без React |
+
+При открытии поездки `openTrip` подтягивает `draft` с сервера — UI бюджета
+совпадает с тем, что реально генерировали. Активный день живёт в `?day=`, чтобы
+выход из карточки места не сбрасывал на «День 1».
+
+Deeplink’и: `shared/lib/yandex` — точка на карте (`ll`/`pt`), маршрут пешком/метро,
+Yandex Go с координатами A→B.
 
 ---
 
@@ -260,8 +301,10 @@ flowchart LR
     K1[otm:* · kudago:*]
     K2[osrm:* · weather:*]
     K3[gigachat:* · trip:plan:*]
-    K4[trip:{id}:progress / events]
-    K5[otm:quota:YYYY-MM-DD]
+    K4[geo:city:* · geo:coords:*]
+    K5[searxng:*]
+    K6[trip:{id}:progress / events]
+    K7[otm:quota:YYYY-MM-DD]
   end
 
   API[FastAPI] --> Persist
@@ -278,27 +321,38 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  CITY{Город в каталоге KudaGo?}
+  DEST[destination из draft] --> GEO[Open-Meteo geocode RU]
+  GEO --> CENTER[lat/lon центра]
+  CENTER --> CITY{Город в каталоге KudaGo?}
   CITY -->|да| KD[KudaGo<br/>часы · популярность · описания]
   CITY -->|нет / мало| OTM[OpenTripMap<br/>базовый POI-слой]
   KD --> MERGE[merge + dedupe]
   OTM --> MERGE
-  MERGE --> LLM[GigaChat curate]
+  MERGE --> FREE{budget = 0?}
+  FREE -->|да| FREEONLY[только free candidates]
+  FREE -->|нет| ALL[полный пул]
+  FREEONLY --> LLM[GigaChat curate]
+  ALL --> LLM
   LLM --> PLAN[RoutePlan]
 
   PLAN --> WX{Дата ≤ 16 дней?}
-  WX -->|да| OM[Open-Meteo]
+  WX -->|да| OM[Open-Meteo weather]
   WX -->|нет| NA[weather: null]
 ```
 
 | Источник | Ключ | Роль |
 | -------- | ---- | ---- |
+| Open-Meteo Geocoding | нет | автокомплит городов + центр маршрута (RU) |
 | KudaGo | нет | приоритет для 12 городов |
-| OpenTripMap | да | фолбэк / дополнение |
-| GigaChat | да | город + отбор мест |
+| OpenTripMap | да | фолбэк / дополнение POI |
+| GigaChat | да | город + отбор мест; опционально tools + SearXNG |
+| SearXNG | нет | локальный web search для demo tool-loop |
 | openrouteservice | да | время в пути (фолбэк OSRM) |
-| Open-Meteo | нет | погода по дням |
+| Open-Meteo Forecast | нет | погода по дням |
 | Wikipedia | нет | превью города на главной (клиент) |
+
+`complete_with_tools` + `scripts/gigachat_search_demo.py` — инфраструктура и демо.
+В 5-стадийный пайплайн поездки web search пока **не** вшит.
 
 ---
 
@@ -307,13 +361,26 @@ flowchart TB
 ```text
 POST   /api/v1/trips                 создать задачу генерации
 GET    /api/v1/trips                 список поездок пользователя
-GET    /api/v1/trips/{id}            статус + RoutePlan
+GET    /api/v1/trips/{id}            статус + draft + RoutePlan
 GET    /api/v1/trips/{id}/stream     SSE: stage | done | error
 POST   /api/v1/trips/{id}/retry      перезапуск
+GET    /api/v1/geo/cities?q=         подсказки городов (RU)
 GET    /api/v1/places/{id}           карточка места
 GET/POST/DELETE /api/v1/favorites   избранное
 GET/PUT /api/v1/trips/{id}/state     packing + ledger
+GET/POST/DELETE …/ledger            учёт трат
+GET    /api/v1/bot/status            статус MAX-бота
+POST   /api/v1/bot/webhook           webhook MAX
 ```
 
 Схемы — `backend/app/schemas/trip.py`, зеркалят `web/.../model/types.ts`
 (сериализация camelCase).
+
+---
+
+## Деплой стенда (кратко)
+
+Прод-стенд на VDS обновляется **pull-based**: таймер на машине тянет `main` и
+пересобирает compose. GitHub Actions на push в `main` только фиксирует факт
+деплоя / health (SSH с Actions до VDS недоступен). Домены и TLS — снаружи
+compose (Caddy + сертификаты).

@@ -33,6 +33,7 @@ trip.cmd up
 | API      | http://localhost:8000      |
 | Swagger  | http://localhost:8000/docs |
 | Bot      | http://localhost:8000/api/v1/bot/status |
+| SearXNG  | http://127.0.0.1:8081 (только localhost) |
 | Postgres | localhost:5433             |
 | Redis    | localhost:6379             |
 
@@ -54,16 +55,17 @@ trip.cmd up
 ```text
 trip / trip.cmd           # CLI для жюри (Unix / Windows)
 backend/                  # FastAPI + Redis + Postgres
-  app/clients/            # GigaChat, OpenTripMap, KudaGo, ORS, Open-Meteo
+  app/clients/            # GigaChat, OTM, KudaGo, ORS, Open-Meteo, SearXNG
   app/services/           # пайплайн генерации из 5 стадий
-  app/api/v1/             # ручки, включая SSE-стрим прогресса
+  app/api/v1/             # ручки, включая SSE и geo/cities
   app/bot/                # MAX-бот: client, handlers, webhook, polling
+infra/searxng/            # settings.yml для локального SearXNG
 web/src/
   app/                    # провайдеры, роутер, стили
   pages/                  # экраны
   features/trip-planner/  # UI, состояние, вызовы API
-  shared/                 # api-клиент, SSE-ридер, config, lib
-docker-compose.yml        # web + api + postgres + redis
+  shared/                 # api-клиент, SSE, config, maplibre, yandex
+docker-compose.yml        # web + api + postgres + redis + searxng
 ```
 
 Диаграммы модулей и потоков — в [ARCHITECTURE.md](ARCHITECTURE.md).
@@ -91,11 +93,11 @@ cd web && npm install && npm run dev
 ## Поток экранов
 
 1. `/` — главная: табы **Поездки** / **Избранное**
-2. `/trips/new` — город, даты, бюджет, число путешественников
+2. `/trips/new` — город, даты (≥ сегодня), бюджет (`0 ₽` = бесплатные места), число путешественников
 3. `/preferences` — интересы и темп
-4. `/loading` — создаёт поездку и показывает реальный прогресс генерации по SSE
-5. `/route?tripId=…` — план по дням, карта, сборы и бюджет
-6. `/places/:placeId` — карточка места
+4. `/loading` — SSE-прогресс; при ошибке — retry или на главную
+5. `/route?tripId=…&day=…` — план по дням, карта, сборы и бюджет
+6. `/places/:placeId` — карточка места; «На карте» открывает пин в Яндекс.Картах
 
 Макет: `web/layout.pen`.
 
