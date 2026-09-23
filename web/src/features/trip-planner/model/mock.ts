@@ -1,4 +1,4 @@
-import { shiftDateTime } from '../lib/format'
+import { localDateIso, shiftDateTime } from '../lib/format'
 import {
   DEFAULT_TRIP_DURATION_DAYS,
   type InterestId,
@@ -30,16 +30,6 @@ export const LOADING_STEPS = [
   'Распределение бюджета',
   'Формирование расписания',
 ] as const
-
-function localDateIso(offsetDays = 0): string {
-  const d = new Date()
-  d.setHours(12, 0, 0, 0)
-  d.setDate(d.getDate() + offsetDays)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 
 /** Fresh draft: arrival = tomorrow, departure = arrival + 3 days. */
 export function createDefaultTripDraft(): TripDraft {

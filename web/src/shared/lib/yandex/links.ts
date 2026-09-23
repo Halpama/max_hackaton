@@ -7,6 +7,20 @@ function latLon(coord: LngLat) {
 }
 
 /**
+ * Open a single point on Yandex Maps (pin at the place, not an address search).
+ * `ll` / `pt` use lon,lat — same order as Place.coordinates.
+ */
+export function yandexMapsPointUrl(coord: LngLat, zoom = 16) {
+  const [lng, lat] = coord
+  const params = new URLSearchParams({
+    ll: `${lng},${lat}`,
+    pt: `${lng},${lat}`,
+    z: String(zoom),
+  })
+  return `https://yandex.ru/maps/?${params.toString()}`
+}
+
+/**
  * Yandex Maps route link.
  * rtext uses lat,lon; rtt: pd=walk, auto=car, mt=transit
  */

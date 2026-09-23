@@ -46,11 +46,22 @@ _KNOWN_COORDS: dict[str, tuple[float, float]] = {
     "нижний новгород": (56.2965, 43.9361),
     "калининград": (54.7104, 20.4522),
     "владивосток": (43.1155, 131.8855),
+    "махачкала": (42.9849, 47.5047),
+    "ульяновск": (54.3142, 48.4031),
 }
 
 _KNOWN_CITY_NAMES = frozenset(CITY_SLUGS) | {
     city["name"].casefold() for city in POPULAR_CITIES
-}
+} | frozenset(_KNOWN_COORDS)
+
+#: Rough mainland + Kaliningrad + Far East envelope. Rejects Africa / Americas
+#: hits when a latinised LLM geoQuery confuses OpenTripMap.
+_RU_LAT_MIN, _RU_LAT_MAX = 41.0, 82.0
+_RU_LON_MIN, _RU_LON_MAX = 19.0, 191.0
+
+
+def in_russia(lat: float, lon: float) -> bool:
+    return _RU_LAT_MIN <= lat <= _RU_LAT_MAX and _RU_LON_MIN <= lon <= _RU_LON_MAX
 
 
 def _result_row(item: dict) -> dict[str, str] | None:
@@ -93,43 +104,76 @@ def is_trip_city(item: dict) -> bool:
     return False
 
 
-async def resolve_coords(name: str) -> dict[str, float]:
-    """Resolve a city name to lat/lon without OpenTripMap.
+def _pick_best_result(results: list[dict], *, russia_only: bool) -> dict | None:
+    ranked = sorted(
+        (
+            item
+            for item in results
+            if (not russia_only or str(item.get("country_code") or "").upper() == "RU")
+            and is_trip_city(item)
+        ),
+        key=lambda item: int(item.get("population") or 0),
+        reverse=True,
+    )
+    if ranked:
+        return ranked[0]
 
-    Used when `api.opentripmap.com` is unreachable from the host (common on
-    some RU VDS networks). Prefers Open-Meteo, then a small built-in table.
+    # Softer pass: any RU hit with coords when filters are too strict.
+    for item in results:
+        if russia_only and str(item.get("country_code") or "").upper() != "RU":
+            continue
+        lat, lon = item.get("latitude"), item.get("longitude")
+        if lat is None or lon is None:
+            continue
+        if russia_only and not in_russia(float(lat), float(lon)):
+            continue
+        return item
+    return None
+
+
+async def resolve_coords(name: str) -> dict[str, float | str]:
+    """Resolve a city name to lat/lon, preferring Russian destinations.
+
+    Used when `api.opentripmap.com` is unreachable, and as the primary geocoder
+    so an LLM latinisation cannot land the itinerary in Africa.
     """
     q = (name or "").strip()
     if not q:
         raise ValueError("empty city name")
 
-    cache_key = f"geo:coords:v1:{q.casefold()}"
+    cache_key = f"geo:coords:ru:v2:{q.casefold()}"
 
-    async def produce() -> dict[str, float]:
+    async def produce() -> dict[str, float | str]:
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:
                 response = await client.get(
                     GEOCODE_URL,
                     params={
                         "name": q,
-                        "count": 5,
+                        "count": 10,
                         "language": "ru",
+                        "countryCode": "RU",
                         "format": "json",
                     },
                 )
                 response.raise_for_status()
                 payload = response.json()
-            for item in payload.get("results") or []:
-                lat, lon = item.get("latitude"), item.get("longitude")
-                if lat is None or lon is None:
-                    continue
-                return {"lat": float(lat), "lon": float(lon), "name": str(item.get("name") or q)}
+            best = _pick_best_result(payload.get("results") or [], russia_only=True)
+            if best is not None:
+                lat, lon = float(best["latitude"]), float(best["longitude"])
+                if in_russia(lat, lon):
+                    return {
+                        "lat": lat,
+                        "lon": lon,
+                        "name": str(best.get("name") or q),
+                        "country": "RU",
+                    }
         except Exception as exc:  # noqa: BLE001 - fall through to table
             logger.warning("Open-Meteo geocode failed for %s: %s", q, exc)
 
         known = _KNOWN_COORDS.get(q.casefold())
         if known is not None:
-            return {"lat": known[0], "lon": known[1], "name": q}
+            return {"lat": known[0], "lon": known[1], "name": q, "country": "RU"}
 
         raise LookupError(f"City not found: {q}")
 

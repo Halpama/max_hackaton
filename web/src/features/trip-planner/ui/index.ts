@@ -26,7 +26,9 @@ export {
   parseTripTab,
   placeNavState,
   shouldShowBottomNav,
+  tripRoutePath,
   type PlaceNavFrom,
+  type PlaceNavState,
   type TripNavTab,
 } from './BottomNav'
 export { PackingPanel } from './PackingPanel'
