@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     gigachat_model: str = "GigaChat"
     gigachat_verify_ssl: bool = True
 
+    #: Internal Docker DNS by default; override for local runs outside compose.
+    searxng_url: str = "http://searxng:8080"
+
     opentripmap_api_key: str = ""
     opentripmap_lang: str = "ru"
     opentripmap_daily_limit: int = 1000

@@ -4,8 +4,12 @@ import json
 import httpx
 
 from app.cache.redis import get_redis
+from app.core.config import settings
+from app.core.errors import UpstreamError
+from app.core.logging import get_logger
 
-SEARXNG_URL = "http://searxng:8080"
+logger = get_logger(__name__)
+
 CACHE_TTL = 3600
 
 
@@ -14,8 +18,6 @@ async def search(
     top_k: int = 5,
     snippet_len: int = 200,
 ) -> list[dict]:
-    redis = await get_redis()
-
     cache_key = (
         "searxng:"
         + hashlib.sha256(
@@ -23,18 +25,25 @@ async def search(
         ).hexdigest()
     )
 
-    cached = await redis.get(cache_key)
+    try:
+        redis = await get_redis()
+        cached = await redis.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception as exc:  # noqa: BLE001 - search still works without cache
+        logger.warning("SearXNG cache read failed: %s", exc)
+        redis = None
 
-    if cached:
-        return json.loads(cached)
-
-    resp = httpx.get(
-        f"{SEARXNG_URL}/search",
-        params={"q": query, "format": "json"},
-        timeout=10,
-    )
-    resp.raise_for_status()
-    data = resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
+            resp = await client.get(
+                f"{settings.searxng_url.rstrip('/')}/search",
+                params={"q": query, "format": "json"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPError as exc:
+        raise UpstreamError(f"SearXNG search failed: {exc}") from exc
 
     results = []
     for item in data.get("results", [])[:top_k]:
@@ -44,10 +53,14 @@ async def search(
             "content": (item.get("content") or "")[:snippet_len],
         })
 
-    await redis.set(
-        cache_key,
-        json.dumps(results, ensure_ascii=False),
-        ex=CACHE_TTL,
-    )
+    try:
+        redis = await get_redis()
+        await redis.set(
+            cache_key,
+            json.dumps(results, ensure_ascii=False),
+            ex=CACHE_TTL,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("SearXNG cache write failed: %s", exc)
 
     return results

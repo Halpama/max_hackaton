@@ -4,7 +4,8 @@
 use_default_settings: true
 
 server:
-  secret_key: "j75vXb0XxxSor5iqMWpW8m4K3UO3rUn"
+  # Override via SEARXNG_SECRET in compose for anything beyond local demo.
+  secret_key: "change-me-local-only"
   limiter: false
   image_proxy: false
 
