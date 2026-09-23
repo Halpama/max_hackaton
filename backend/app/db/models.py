@@ -62,12 +62,15 @@ class Trip(Base, TimestampMixin):
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=False))
     budget: Mapped[int] = mapped_column(Integer, default=0)
     travelers: Mapped[int] = mapped_column(Integer, default=1)
+    adults: Mapped[int] = mapped_column(Integer, default=1)
+    children: Mapped[int] = mapped_column(Integer, default=0)
     interests: Mapped[list[str]] = mapped_column(JsonColumn, default=list)
     pace: Mapped[str] = mapped_column(String(16), default="medium")
     find_housing: Mapped[bool] = mapped_column(default=False)
 
     # pending | running | ready | failed
     status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    generation_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, index=True)
     stage: Mapped[str | None] = mapped_column(String(32))
     error: Mapped[str | None] = mapped_column(Text)
     route_plan: Mapped[dict | None] = mapped_column(JsonColumn)

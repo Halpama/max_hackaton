@@ -11,6 +11,7 @@ TTL_XID = 30 * DAY
 TTL_OSRM = 30 * DAY
 TTL_COMPLETION = 1 * DAY
 TTL_PLAN = 6 * 3600
+TTL_CACHE_LOCK = 60
 #: KudaGo is an editorial catalogue — opening hours and ratings move slowly.
 TTL_KUDAGO = 7 * DAY
 #: Long enough to survive a retry storm, short enough that a forecast issued
@@ -60,7 +61,7 @@ def gigachat_completion(model: str, payload: object) -> str:
 
 
 def trip_plan(payload: object) -> str:
-    return f"trip:plan:{digest(payload)}"
+    return f"trip:plan:v2:{digest(payload)}"
 
 
 def trip_progress_channel(trip_id: object) -> str:

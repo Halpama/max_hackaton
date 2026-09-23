@@ -2,8 +2,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_router
+from app.api.v1.trips import resume_pending_trips
 from app.bot.lifecycle import start_bot, stop_bot
 from app.cache.redis import close_redis, get_redis
 from app.core.config import settings
@@ -16,6 +18,7 @@ from app.core.logging import (
     set_request_context,
     setup_logging,
 )
+from app.core.rate_limit import RATE_LIMIT_CODE, allow_request
 from app.db.session import dispose_engine
 
 setup_logging()
@@ -37,6 +40,7 @@ async def lifespan(_: FastAPI):
         logger.warning("OPENTRIPMAP_API_KEY is empty — place search will fail outside KudaGo cities")
 
     await start_bot()
+    await resume_pending_trips()
     yield
     await stop_bot()
     await close_redis()
@@ -96,6 +100,26 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    # CORS preflights carry no credentials and must never be throttled.
+    if request.method != "OPTIONS" and not await allow_request(
+        request.method,
+        request.url.path,
+        request.headers.get("Authorization"),
+        request.client.host if request.client else None,
+    ):
+        return JSONResponse(
+            status_code=429,
+            content={
+                "code": RATE_LIMIT_CODE,
+                "message": "Слишком много запросов. Попробуйте позже.",
+            },
+            headers={"Retry-After": str(settings.rate_limit_window_seconds)},
+        )
+    return await call_next(request)
 
 register_error_handlers(app)
 app.include_router(api_router, prefix="/api/v1")

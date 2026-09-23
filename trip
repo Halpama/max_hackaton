@@ -276,10 +276,34 @@ wait_healthy() {
   return 1
 }
 
+# Vite build args for the web image come from the compose project env, not
+# web/.env (that file is only for `npm run dev`). Export from web/.env so
+# `./trip up` still bakes Yandex tiles when the key lives next to the SPA.
+export_web_build_env() {
+  local web_env="$ROOT/web/.env"
+  [[ -f "$web_env" ]] || return 0
+  if [[ -z "${VITE_YANDEX_MAPS_TILES_KEY:-}" ]]; then
+    local yandex
+    yandex="$(grep -E '^VITE_YANDEX_MAPS_TILES_KEY=' "$web_env" 2>/dev/null | tail -1 || true)"
+    if [[ -n "$yandex" ]]; then
+      export VITE_YANDEX_MAPS_TILES_KEY="${yandex#*=}"
+      VITE_YANDEX_MAPS_TILES_KEY="${VITE_YANDEX_MAPS_TILES_KEY%\"}"
+      VITE_YANDEX_MAPS_TILES_KEY="${VITE_YANDEX_MAPS_TILES_KEY#\"}"
+      export VITE_YANDEX_MAPS_TILES_KEY
+    fi
+  fi
+}
+
 cmd_up() {
   need_docker
   ensure_env
+  export_web_build_env
   hdr "Запуск Trip Planner"
+  if [[ -n "${VITE_YANDEX_MAPS_TILES_KEY:-}" ]]; then
+    info "Yandex tiles key: из web/.env (build arg)"
+  else
+    warn "VITE_YANDEX_MAPS_TILES_KEY пуст → карта будет OpenStreetMap"
+  fi
   info "docker compose up -d --build"
   "${COMPOSE[@]}" up -d --build
   wait_healthy 90 || true

@@ -5,12 +5,12 @@ from collections.abc import AsyncIterator
 import orjson
 from fastapi import APIRouter, Header, Request, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.api.deps import CurrentUser, DbSession, OwnedTrip
 from app.cache import keys
 from app.cache.redis import get_redis
-from app.core.errors import NotFoundError
+from app.core.errors import ConflictError, NotFoundError
 from app.core.logging import get_logger
 from app.core.security import resolve_user
 from app.db.models import Trip, User
@@ -33,6 +33,7 @@ router = APIRouter(prefix="/trips", tags=["trips"])
 
 #: asyncio only keeps weak references to tasks; hold them so they are not collected.
 _background_tasks: set[asyncio.Task] = set()
+_trip_tasks: dict[uuid.UUID, asyncio.Task] = {}
 
 SSE_HEADERS = {
     "Cache-Control": "no-cache, no-transform",
@@ -50,7 +51,8 @@ def trip_to_draft(trip: Trip) -> TripDraft:
         end_date=trip.end_at.date().isoformat(),
         end_time=f"{trip.end_at.hour:02d}:{trip.end_at.minute:02d}",
         budget=trip.budget,
-        travelers=trip.travelers,
+        adults=trip.adults,
+        children=trip.children,
         interests=list(trip.interests or []),
         pace=trip.pace,
         find_housing=trip.find_housing,
@@ -75,16 +77,65 @@ def trip_to_summary(trip: Trip) -> TripSummary:
         id=str(trip.id),
         city=city,
         date_label=formatting.short_date_range_label(trip.start_at.date(), trip.end_at.date()),
-        travelers_label=f"{trip.travelers} чел",
+        travelers_label=formatting.travelers_short_label(trip.adults, trip.children),
         budget_label=budget_label(trip.budget),
         status=trip.status,
     )
 
 
-def _spawn(trip_id: uuid.UUID, draft: TripDraft) -> None:
-    task = asyncio.create_task(generate_trip(trip_id, draft))
+def _spawn(trip_id: uuid.UUID, draft: TripDraft, generation_id: uuid.UUID) -> bool:
+    existing = _trip_tasks.get(trip_id)
+    if existing is not None and not existing.done():
+        return False
+    task = asyncio.create_task(generate_trip(trip_id, draft, generation_id=generation_id))
     _background_tasks.add(task)
-    task.add_done_callback(_background_tasks.discard)
+    _trip_tasks[trip_id] = task
+
+    def _cleanup(done: asyncio.Task) -> None:
+        _background_tasks.discard(done)
+        if _trip_tasks.get(trip_id) is done:
+            _trip_tasks.pop(trip_id, None)
+
+    task.add_done_callback(_cleanup)
+    return True
+
+
+async def resume_pending_trips() -> None:
+    """Recover work lost with the previous process after a restart."""
+    async with get_session_factory()() as session:
+        trips = list(
+            await session.scalars(
+                select(Trip).where(
+                    Trip.archived.is_(False),
+                    Trip.status.in_(("pending", "running")),
+                )
+            )
+        )
+        claimed: list[tuple[Trip, uuid.UUID]] = []
+        for trip in trips:
+            generation_id = uuid.uuid4()
+            claim = update(Trip).where(
+                Trip.id == trip.id,
+                Trip.status.in_(("pending", "running")),
+            )
+            if trip.generation_id is None:
+                claim = claim.where(Trip.generation_id.is_(None))
+            else:
+                claim = claim.where(Trip.generation_id == trip.generation_id)
+            result = await session.execute(
+                claim.values(
+                    generation_id=generation_id,
+                    status="pending",
+                    stage=None,
+                    error=None,
+                )
+            )
+            if result.rowcount == 1:
+                claimed.append((trip, generation_id))
+        await session.commit()
+
+    for trip, generation_id in claimed:
+        _spawn(trip.id, trip_to_draft(trip), generation_id)
 
 
 @router.post("", response_model=TripCreated, status_code=status.HTTP_202_ACCEPTED)
@@ -100,6 +151,9 @@ async def create_trip(draft: TripDraft, session: DbSession, user: CurrentUser) -
         end_at=end_at,
         budget=draft.budget,
         travelers=draft.travelers,
+        adults=draft.adults,
+        children=draft.children,
+        generation_id=uuid.uuid4(),
         interests=list(draft.interests),
         pace=draft.pace,
         find_housing=draft.find_housing,
@@ -113,10 +167,15 @@ async def create_trip(draft: TripDraft, session: DbSession, user: CurrentUser) -
         user_id=user.id,
         trip_id=trip.id,
         session=session,
-        payload={"destination": trip.destination, "travelers": trip.travelers},
+        payload={
+            "destination": trip.destination,
+            "travelers": trip.travelers,
+            "adults": trip.adults,
+            "children": trip.children,
+        },
     )
 
-    _spawn(trip.id, draft)
+    _spawn(trip.id, draft, trip.generation_id)
     return TripCreated(id=str(trip.id), status="pending")
 
 
@@ -142,10 +201,22 @@ async def delete_trip(trip: OwnedTrip, session: DbSession) -> None:
 @router.post("/{trip_id}/retry", response_model=TripCreated)
 async def retry_trip(trip: OwnedTrip, session: DbSession) -> TripCreated:
     """Re-run generation for a trip that failed."""
+    if trip.status != "failed":
+        raise ConflictError("Повторить можно только неудачную генерацию")
     draft = trip_to_draft(trip)
-    trip.status = "pending"
-    trip.stage = None
-    trip.error = None
+    generation_id = uuid.uuid4()
+    result = await session.execute(
+        update(Trip)
+        .where(Trip.id == trip.id, Trip.status == "failed")
+        .values(
+            status="pending",
+            stage=None,
+            error=None,
+            generation_id=generation_id,
+        )
+    )
+    if result.rowcount != 1:
+        raise ConflictError("Генерация уже была перезапущена")
     await session.commit()
     await record_event(
         "trip_updated",
@@ -155,6 +226,9 @@ async def retry_trip(trip: OwnedTrip, session: DbSession) -> TripCreated:
         payload={"action": "retry"},
     )
 
+    old_task = _trip_tasks.get(trip.id)
+    if old_task is not None and not old_task.done():
+        old_task.cancel()
     # Drop the old progress log so the loader does not replay the failed run.
     try:
         redis = await get_redis()
@@ -162,7 +236,7 @@ async def retry_trip(trip: OwnedTrip, session: DbSession) -> TripCreated:
     except Exception as exc:  # noqa: BLE001 - stale progress is not fatal
         logger.warning("Could not reset progress for %s: %s", trip.id, exc)
 
-    _spawn(trip.id, draft)
+    _spawn(trip.id, draft, generation_id)
     return TripCreated(id=str(trip.id), status="pending")
 
 
@@ -239,12 +313,36 @@ async def stream_trip(
             raise
         except Exception as exc:  # noqa: BLE001
             logger.exception("SSE stream for %s failed", trip_id)
+            async with get_session_factory()() as session:
+                current = await session.scalar(
+                    select(Trip).where(
+                        Trip.id == parsed_id,
+                        Trip.archived.is_(False),
+                    )
+                )
+            if current is not None and current.status == "ready" and current.route_plan:
+                yield _sse(
+                    "done",
+                    {"type": "done", "tripId": trip_id, "route": current.route_plan},
+                )
+                return
+            if current is not None and current.status == "failed":
+                yield _sse(
+                    "error",
+                    {
+                        "type": "error",
+                        "tripId": trip_id,
+                        "message": current.error or "Не удалось построить маршрут",
+                        "code": "generation_failed",
+                    },
+                )
+                return
             yield _sse(
                 "error",
                 {
                     "type": "error",
                     "tripId": trip_id,
-                    "message": "Поток прогресса прервался",
+                    "message": "Поток прогресса прервался. Повторите запрос позже.",
                     "code": "stream_failed",
                     "details": str(exc),
                 },

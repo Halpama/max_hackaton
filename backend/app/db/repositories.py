@@ -172,9 +172,10 @@ async def add_ledger_entry(
 
 async def delete_ledger_entry(
     session: AsyncSession, trip_id: uuid.UUID, entry_id: uuid.UUID
-) -> None:
-    await session.execute(
+) -> bool:
+    result = await session.execute(
         delete(LedgerEntry).where(
             LedgerEntry.trip_id == trip_id, LedgerEntry.id == entry_id
         )
     )
+    return result.rowcount > 0

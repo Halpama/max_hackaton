@@ -161,7 +161,8 @@ async def curate_places(
     memory = f"\nПамять сервиса (учитывай при выборе):\n{memory_block}\n" if memory_block else ""
 
     prompt = (
-        f"Собери маршрут по городу для {draft.travelers} чел.\n"
+        f"Собери маршрут по городу для группы: {draft.adults} взрослых и "
+        f"{draft.children} детей (всего {draft.travelers} чел.).\n"
         f"Интересы: {interests}\n"
         f"Темп: {PACE_LABELS.get(draft.pace, draft.pace)}\n"
         f"Бюджет на всю поездку: {draft.budget} ₽"

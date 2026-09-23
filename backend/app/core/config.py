@@ -65,6 +65,14 @@ class Settings(BaseSettings):
     max_bot_mode: Literal["auto", "webhook", "polling", "off"] = "auto"
     max_webapp_url: str = "https://2-rist.ru"
 
+    #: Fixed-window request limit for /api/v1. Fails open when Redis is down.
+    rate_limit_enabled: bool = True
+    rate_limit_window_seconds: int = 60
+    rate_limit_max_requests: int = 120
+    #: Stricter buckets for expensive endpoints.
+    rate_limit_trip_max: int = 10
+    rate_limit_geo_max: int = 30
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
