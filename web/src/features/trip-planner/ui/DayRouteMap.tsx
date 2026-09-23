@@ -29,52 +29,35 @@ const CAMERA_DURATION_MS = 850
 const ROUTE_DRAW_MS = 950
 
 function buildBasemapStyle() {
-  if (YANDEX_MAPS_TILES_KEY) {
-    const params = new URLSearchParams({
-      apikey: YANDEX_MAPS_TILES_KEY,
-      lang: 'ru_RU',
-      l: 'map',
-      projection: 'web_mercator',
-    })
-    return {
-      version: 8 as const,
-      sources: {
-        yandex: {
-          type: 'raster' as const,
-          tiles: [
-            `https://tiles.api-maps.yandex.ru/v1/tiles/?${params.toString()}&x={x}&y={y}&z={z}`,
-          ],
-          tileSize: 256,
-          attribution: '© Яндекс Карты',
-          maxzoom: 19,
-        },
-      },
-      layers: [
-        {
-          id: 'yandex',
-          type: 'raster' as const,
-          source: 'yandex',
-        },
-      ],
-    }
-  }
+  const sourceId = 'basemap'
+  const tiles = YANDEX_MAPS_TILES_KEY
+    ? [
+        `https://tiles.api-maps.yandex.ru/v1/tiles/?${new URLSearchParams({
+          apikey: YANDEX_MAPS_TILES_KEY,
+          lang: 'ru_RU',
+          l: 'map',
+          projection: 'web_mercator',
+        }).toString()}&x={x}&y={y}&z={z}`,
+      ]
+    : ['https://tile.openstreetmap.org/{z}/{x}/{y}.png']
+  const attribution = YANDEX_MAPS_TILES_KEY ? '© Яндекс Карты' : '&copy; OpenStreetMap'
 
   return {
     version: 8 as const,
     sources: {
-      osm: {
+      [sourceId]: {
         type: 'raster' as const,
-        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tiles,
         tileSize: 256,
-        attribution: '&copy; OpenStreetMap',
+        attribution,
         maxzoom: 19,
       },
     },
     layers: [
       {
-        id: 'osm',
+        id: sourceId,
         type: 'raster' as const,
-        source: 'osm',
+        source: sourceId,
       },
     ],
   }
