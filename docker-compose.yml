@@ -43,8 +43,9 @@ services:
       ALL_PROXY: ${ALL_PROXY:-}
       HTTPS_PROXY: ${HTTPS_PROXY:-}
       HTTP_PROXY: ${HTTP_PROXY:-}
-      NO_PROXY: ${NO_PROXY:-postgres,redis,localhost,127.0.0.1,host.docker.internal}
-      no_proxy: ${NO_PROXY:-postgres,redis,localhost,127.0.0.1,host.docker.internal}
+      NO_PROXY: ${NO_PROXY:-postgres,redis,searxng,localhost,127.0.0.1,host.docker.internal}
+      no_proxy: ${NO_PROXY:-postgres,redis,searxng,localhost,127.0.0.1,host.docker.internal}
+      SEARXNG_URL: ${SEARXNG_URL:-http://searxng:8080}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -54,6 +55,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      searxng:
+        condition: service_started
     volumes:
       - ./backend:/app
       - ./backend/logs:/app/logs
@@ -91,6 +94,20 @@ services:
       timeout: 5s
       retries: 5
 
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    # Keep UI off the host by default; api reaches it on the compose network.
+    # Publish only for local debugging: SEARXNG_PUBLISH_PORT=8081
+    ports:
+      - "${SEARXNG_PUBLISH_PORT:-127.0.0.1:8081}:8080"
+    volumes:
+      - ./infra/searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://searxng:8080/}
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-change-me-local-only}
+
 volumes:
   postgres-data:
   redis-data:
@@ -102,3 +119,4 @@ networks:
       config:
         - subnet: 172.28.0.0/16
         - subnet: fd00:cafe:1::/64
+
