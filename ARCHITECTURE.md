@@ -295,6 +295,8 @@ flowchart LR
     P[places]
     F[favorites]
     L[ledger / packing state]
+    A[audit_events]
+    M[place_stats / city_memory]
   end
 
   subgraph Cache["Redis"]
@@ -366,6 +368,7 @@ flowchart TB
 POST   /api/v1/trips                 создать задачу генерации
 GET    /api/v1/trips                 список поездок пользователя
 GET    /api/v1/trips/{id}            статус + draft + RoutePlan
+DELETE /api/v1/trips/{id}            архивировать (soft-hide)
 GET    /api/v1/trips/{id}/stream     SSE: stage | done | error
 POST   /api/v1/trips/{id}/retry      перезапуск
 GET    /api/v1/geo/cities?q=         подсказки городов (RU)
@@ -374,8 +377,12 @@ GET/POST/DELETE /api/v1/favorites   избранное
 GET/PUT /api/v1/trips/{id}/state     packing + ledger
 GET/POST/DELETE …/ledger            учёт трат
 GET    /api/v1/bot/status            статус MAX-бота
+POST   /api/v1/bot/invite            клавиатура-инвайт пользователю
 POST   /api/v1/bot/webhook           webhook MAX
 ```
+
+`/api/v1` защищён fixed-window rate limit на Redis (429 `rate_limited`;
+вебхук бота и `/health` — вне лимита).
 
 Схемы — `backend/app/schemas/trip.py`, зеркалят `web/.../model/types.ts`
 (сериализация camelCase).

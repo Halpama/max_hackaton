@@ -64,6 +64,7 @@ docker compose exec -e OPENTRIPMAP_API_KEY=stub api python scripts/offline_e2e.p
 | GET    | `/api/v1/trips/{id}/stream`           | SSE: `stage`, `done`, `error`                 |
 | GET    | `/api/v1/trips/{id}`                  | статус + готовый `RoutePlan`                  |
 | GET    | `/api/v1/trips`                       | список поездок для главной                    |
+| DELETE | `/api/v1/trips/{id}`                  | архивировать поездку (soft-hide)              |
 | POST   | `/api/v1/trips/{id}/retry`            | перезапустить упавшую генерацию               |
 | GET    | `/api/v1/places/{id}`                 | карточка места                                |
 | GET    | `/api/v1/favorites`                   | избранные места                               |
@@ -76,7 +77,12 @@ docker compose exec -e OPENTRIPMAP_API_KEY=stub api python scripts/offline_e2e.p
 | DELETE | `/api/v1/trips/{id}/ledger/{entryId}` | удалить запись                                |
 | GET    | `/api/v1/geo/cities`                  | автокомплит городов (Open-Meteo, только RU)   |
 | GET    | `/api/v1/bot/status`                  | конфиг бота + `/me` (если токен есть)         |
+| POST   | `/api/v1/bot/invite`                  | отправить пользователю клавиатуру-инвайт      |
 | POST   | `/api/v1/bot/webhook`                 | вебхук MAX (secret в `X-Max-Bot-Api-Secret`)  |
+
+Лимиты: `/api/v1` закрыт fixed-window rate limit на Redis (глобально 120/мин,
+`POST /trips` — 10/мин, `geo/cities` — 30/мин, вебхук бота не лимитируется;
+`RATE_LIMIT_*` в `.env.example`). Превышение — `429` с `code: "rate_limited"`.
 
 ## Как собирается маршрут
 
@@ -109,8 +115,10 @@ docker compose exec -e OPENTRIPMAP_API_KEY=stub api python scripts/offline_e2e.p
 docker compose exec api python scripts/gigachat_search_demo.py "курс USD ЦБ сегодня"
 ```
 
-В пятистадийный пайплайн поездки tool-loop пока не встроен — это инфра для
-следующих фич.
+В сам пятистадийный пайплайн tool-loop GigaChat пока не встроен — это инфра
+для следующих фич. При этом thin digests SearXNG (короткие discovery-хинты
+и городской digest ≤800 символов) уже используются в стадии `places`:
+`app/services/web_intel.py` + память городов в Postgres.
 
 ## Источники данных
 
@@ -122,7 +130,7 @@ docker compose exec api python scripts/gigachat_search_demo.py "курс USD Ц�
 | openrouteservice  | нужен | время в пути; 2000 запросов в сутки, при отказе — публичный OSRM |
 | Open-Meteo Forecast | нет | прогноз на день маршрута, 16 дней вперёд                       |
 | GigaChat          | нужен | нормализация города и отбор мест; опционально tools + SearXNG  |
-| SearXNG           | нет   | локальный веб-поиск для demo tool-calling                      |
+| SearXNG           | нет   | thin digests (хинты/дайджест) в stage `places` + demo tool-calling |
 
 KudaGo покрывает msk, spb, nnv, kzn, ekb, nsk, smr, krd, sochi, ufa,
 krasnoyarsk, vbg. Там, где он есть, места берутся оттуда: приходят настоящие
@@ -235,5 +243,7 @@ GigaChat отдаёт сертификат, подписанный «Russian Tru
 образ, поэтому `GIGACHAT_VERIFY_SSL=true` работает из коробки. Флаг `false`
 оставлен как аварийный переключатель.
 
-Переменные SearXNG (опционально): `SEARXNG_URL`, `SEARXNG_SECRET`,
-`SEARXNG_PUBLISH_PORT` — см. `backend/.env.example` и `docker-compose.yml`.
+Переменные SearXNG: `SEARXNG_URL`, `SEARXNG_ENABLED` — настройки **backend**
+(`.env.example`). `SEARXNG_SECRET` и `SEARXNG_PUBLISH_PORT` относятся к
+контейнеру `searxng` и передаются через `docker-compose.yml`, backend'у они не
+нужны.
