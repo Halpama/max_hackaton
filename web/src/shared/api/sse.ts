@@ -48,7 +48,7 @@ export async function streamSse(path: string, { onEvent, signal }: SseHandlers):
       // Events are separated by a blank line.
       let separator = buffer.indexOf('\n\n')
       while (separator !== -1) {
-        dispatch(buffer.slice(0, separator), onEvent)
+        dispatchSseChunk(buffer.slice(0, separator), onEvent)
         buffer = buffer.slice(separator + 2)
         separator = buffer.indexOf('\n\n')
       }
@@ -58,7 +58,8 @@ export async function streamSse(path: string, { onEvent, signal }: SseHandlers):
   }
 }
 
-function dispatch(chunk: string, onEvent: SseHandlers['onEvent']) {
+/** Parse one SSE chunk (`event:` / `data:` lines) and emit it. Exported for tests. */
+export function dispatchSseChunk(chunk: string, onEvent: SseHandlers['onEvent']) {
   let eventName = 'message'
   const dataLines: string[] = []
 
