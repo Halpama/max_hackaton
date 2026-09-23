@@ -33,7 +33,7 @@ from app.schemas.trip import (
 )
 from app.services import budget as budget_service
 from app.services.audit import record_event
-from app.services import formatting, llm, memory, opening_hours, progress, transit, web_intel
+from app.services import city_guide, formatting, llm, memory, opening_hours, progress, transit, web_intel
 from app.services.places import PlaceCandidate, balance_food, collect_candidates
 from app.services.scheduler import (
     PACE_ACTIVITY_COUNT,
@@ -426,8 +426,16 @@ async def build_route(
     route = RoutePlan(
         city=city,
         date_label=formatting.date_range_label(start_at.date(), end_at.date()),
-        travelers_label=formatting.travelers_label(draft.travelers),
+        travelers_label=formatting.travelers_label(draft.adults, draft.children),
         budget_label=budget_service.budget_label(draft.budget),
+        city_guide=await city_guide.build_city_guide(
+            city,
+            start_at.date(),
+            lat=lat,
+            lon=lon,
+            digest=city_digest,
+            hints=discovery_hints,
+        ),
         days=[day for day in days if day.activities] or days[:1],
         places=places,
     )
@@ -470,6 +478,8 @@ async def generate_trip(trip_id: uuid.UUID, draft: TripDraft) -> None:
         "end_time": draft.end_time,
         "budget": draft.budget,
         "travelers": draft.travelers,
+        "adults": draft.adults,
+        "children": draft.children,
         "interests": list(draft.interests),
         "pace": draft.pace,
         "find_housing": draft.find_housing,

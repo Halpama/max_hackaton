@@ -6,7 +6,7 @@ app can consume responses without any mapping layer.
 from datetime import date as date_type
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
 TripPace = Literal["calm", "medium", "active"]
@@ -37,10 +37,28 @@ class TripDraft(CamelModel):
     end_date: str
     end_time: str
     budget: int = Field(ge=0, le=MAX_TRIP_BUDGET)
-    travelers: int = Field(ge=1, le=10)
+    adults: int = Field(default=2, ge=1, le=10)
+    children: int = Field(default=0, ge=0, le=10)
     interests: list[InterestId] = Field(default_factory=list)
     pace: TripPace = "medium"
     find_housing: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_legacy_travelers(cls, value: object) -> object:
+        if isinstance(value, dict) and "travelers" in value and "adults" not in value:
+            value = {**value, "adults": value["travelers"], "children": 0}
+        return value
+
+    @model_validator(mode="after")
+    def _valid_party_size(self) -> "TripDraft":
+        if self.adults + self.children > 10:
+            raise ValueError("the total number of travelers must not exceed 10")
+        return self
+
+    @property
+    def travelers(self) -> int:
+        return self.adults + self.children
 
     @field_validator("start_date", "end_date")
     @classmethod
@@ -124,11 +142,35 @@ class DayPlan(CamelModel):
     weather: DayWeather | None = None
 
 
+class SeasonalityMonth(CamelModel):
+    month: int = Field(ge=1, le=12)
+    label: str
+    score: int = Field(ge=1, le=5)
+    level: str
+    is_trip_month: bool = False
+
+
+class CityGuide(CamelModel):
+    type: str
+    summary: str
+    history: str
+    highlights: list[str]
+    trip_month: int = Field(ge=1, le=12)
+    trip_month_label: str
+    seasonality: list[SeasonalityMonth]
+    #: climate = Open-Meteo archive; profile = hand-tuned fallback
+    seasonality_source: str | None = None
+    image_url: str | None = None
+    source_url: str | None = None
+    source_name: str | None = None
+
+
 class RoutePlan(CamelModel):
     city: str
     date_label: str
     travelers_label: str
     budget_label: str
+    city_guide: CityGuide | None = None
     days: list[DayPlan]
     places: dict[str, Place]
 

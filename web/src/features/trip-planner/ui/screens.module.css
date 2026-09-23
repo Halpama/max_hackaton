@@ -1,221 +1,221 @@
 .summary {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 28px 16px 20px;
-  background: linear-gradient(180deg, #ffffff 0%, #f7f8fc 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 28px 16px 20px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7f8fc 100%);
 }
 
 .panel {
-  animation: panelReveal 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-  padding-top: 10px;
+    animation: panelReveal 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    padding-top: 10px;
 }
 
 .mapReveal {
-  animation: panelReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: panelReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes panelReveal {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .city {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
 }
 
 .badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 14px;
-  background: var(--tp-primary-soft);
-  color: var(--tp-primary-deep);
-  font-family: var(--tp-font);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: var(--tp-primary-soft);
+    color: var(--tp-primary-deep);
+    font-family: var(--tp-font);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
 }
 
 .badgeWarn {
-  composes: badge;
-  background: rgba(247, 103, 7, 0.12);
-  color: #d9480f;
+    composes: badge;
+    background: rgba(247, 103, 7, 0.12);
+    color: #d9480f;
 }
 
 .badgeStack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
 }
 
 .badgePrefix {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  opacity: 0.78;
-  text-transform: none;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    opacity: 0.78;
+    text-transform: none;
 }
 
 .badgeAmount {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
 }
 
 .badgeValue {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
 }
 
 .badgeCurrency {
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0.8;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.8;
 }
 
 .meta {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--tp-muted);
-  letter-spacing: -0.01em;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--tp-muted);
+    letter-spacing: -0.01em;
 }
 
 .metaItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .metaDot {
-  width: 3px;
-  height: 3px;
-  border-radius: 999px;
-  background: #c4c8d4;
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: #c4c8d4;
 }
 
 .mainTabs {
-  padding: 4px 16px 0;
+    padding: 4px 16px 0;
 }
 
 .mapWrap {
-  padding: 12px 16px 0;
+    padding: 12px 16px 0;
 }
 
 .dayControls {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 16px 0 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 0 10px;
 }
 
 .list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 16px 16px calc(16px + 8px);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 16px 16px calc(16px + 8px);
 }
 
 .listItem {
-  display: flex;
-  flex-direction: column;
-  opacity: 0;
-  transform: translateY(14px);
-  animation: listReveal 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transform: translateY(14px);
+    animation: listReveal 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes listReveal {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .panel,
-  .mapReveal,
-  .listItem,
-  .progressWrap {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
+    .panel,
+    .mapReveal,
+    .listItem,
+    .progressWrap {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .loadingCenter {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-  text-align: center;
-  padding: 32px 16px 48px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    text-align: center;
+    padding: 32px 16px 48px;
 }
 
 .loadingCopy {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 300px;
 }
 
 .loadingTitle {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
 }
 
 .loadingSub {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.45;
-  color: var(--tp-muted);
-  font-weight: 500;
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--tp-muted);
+    font-weight: 500;
 }
 
 .progressWrap {
-  width: 100%;
-  max-width: 320px;
-  animation: rise 0.5s ease both;
+    width: 100%;
+    max-width: 320px;
+    animation: rise 0.5s ease both;
 }
 
 @keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
