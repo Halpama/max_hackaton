@@ -74,6 +74,7 @@ docker compose exec -e OPENTRIPMAP_API_KEY=stub api python scripts/offline_e2e.p
 | GET    | `/api/v1/trips/{id}/ledger`           | траты и пополнения                            |
 | POST   | `/api/v1/trips/{id}/ledger`           | добавить запись                               |
 | DELETE | `/api/v1/trips/{id}/ledger/{entryId}` | удалить запись                                |
+| GET    | `/api/v1/geo/cities`                  | автокомплит городов (Open-Meteo, только RU)   |
 | GET    | `/api/v1/bot/status`                  | конфиг бота + `/me` (если токен есть)         |
 | POST   | `/api/v1/bot/webhook`                 | вебхук MAX (secret в `X-Max-Bot-Api-Secret`)  |
 
@@ -83,11 +84,13 @@ docker compose exec -e OPENTRIPMAP_API_KEY=stub api python scripts/offline_e2e.p
 загрузки двигается по реальному прогрессу, а не по таймеру.
 
 1. `analyze` — GigaChat нормализует город и выбирает радиус поиска.
-2. `places` — сначала KudaGo по городу, дальше OpenTripMap `geoname` → `radius`
-   по интересам → `xid` за деталями; затем GigaChat отбирает лучшие места.
+2. `places` — центр города через Open-Meteo Geocoding (`countryCode=RU`, bbox
+   России); затем KudaGo и/или OpenTripMap → GigaChat отбирает места.
+   При `budget = 0` в пул попадают только бесплатные кандидаты.
 3. `transit` — openrouteservice (или OSRM) считает время между точками,
    выбирается пешком / метро / такси.
-4. `budget` — бюджет раскладывается по местам.
+4. `budget` — при `budget > 0` цены масштабируются под бюджет; при `0`
+   везде «Бесплатно», лейбл поездки `0 ₽`.
 5. `schedule` — дни, время визитов, погода на каждый день, итоговый `RoutePlan`.
 
 Прогресс публикуется в Redis pub/sub `trip:{id}:progress`, SSE-ручка на него
@@ -97,15 +100,29 @@ docker compose exec -e OPENTRIPMAP_API_KEY=stub api python scripts/offline_e2e.p
 есть и места отбираются по рейтингу; если OSRM недоступен, время считается по
 прямой.
 
+### SearXNG и web search
+
+В compose есть сервис `searxng` и клиент `app/clients/searxng.py`. GigaChat умеет
+`complete_with_tools` со схемой `web_search` (`app/function_schema.py`). Демо:
+
+```bash
+docker compose exec api python scripts/gigachat_search_demo.py "курс USD ЦБ сегодня"
+```
+
+В пятистадийный пайплайн поездки tool-loop пока не встроен — это инфра для
+следующих фич.
+
 ## Источники данных
 
 | Источник          | Ключ  | Что даёт                                                      |
 | ----------------- | ----- | ------------------------------------------------------------- |
+| Open-Meteo Geocoding | нет | автокомплит + lat/lon центра города (только RU)             |
 | KudaGo            | нет   | часы работы, популярность, редакторские описания, фото — 12 городов |
 | OpenTripMap       | нужен | базовый слой мест для всех остальных городов                   |
 | openrouteservice  | нужен | время в пути; 2000 запросов в сутки, при отказе — публичный OSRM |
-| Open-Meteo        | нет   | прогноз на день маршрута, 16 дней вперёд                       |
-| GigaChat          | нужен | нормализация города и отбор мест                               |
+| Open-Meteo Forecast | нет | прогноз на день маршрута, 16 дней вперёд                       |
+| GigaChat          | нужен | нормализация города и отбор мест; опционально tools + SearXNG  |
+| SearXNG           | нет   | локальный веб-поиск для demo tool-calling                      |
 
 KudaGo покрывает msk, spb, nnv, kzn, ekb, nsk, smr, krd, sochi, ufa,
 krasnoyarsk, vbg. Там, где он есть, места берутся оттуда: приходят настоящие
@@ -117,7 +134,8 @@ krasnoyarsk, vbg. Там, где он есть, места берутся отт
 
 Цен не публикует ни один бесплатный источник, поэтому стоимость остаётся нашей
 оценкой и помечена `priceEstimated: true` — фронт рисует рядом хинт «Оценка».
-Бесплатный вход в парк оценкой не считается.
+Бесплатный вход в парк оценкой не считается. Бюджет `0` — режим «только
+бесплатные места», а не «бюджет не задан».
 
 Погода приходит только на дни внутри 16-дневного горизонта. Дальше `weather`
 отсутствует, и день честно пишет, что прогноза пока нет.
@@ -133,6 +151,8 @@ krasnoyarsk, vbg. Там, где он есть, места берутся отт
 | `otm:xid:*`                 | 30 дн  |
 | `osrm:*`                    | 30 дн  |
 | `otm:radius:*`              | 7 дн   |
+| `geo:city:*` / `geo:coords:*` | как geoname |
+| `searxng:*`                 | 1 ч    |
 | `gigachat:completion:*`     | 1 дн   |
 | `trip:plan:*`               | 6 ч    |
 | `gigachat:token`            | до истечения токена |
@@ -182,3 +202,6 @@ GigaChat отдаёт сертификат, подписанный «Russian Tru
 обычном хранилище доверия. Сертификаты лежат в `backend/certs/` и ставятся в
 образ, поэтому `GIGACHAT_VERIFY_SSL=true` работает из коробки. Флаг `false`
 оставлен как аварийный переключатель.
+
+Переменные SearXNG (опционально): `SEARXNG_URL`, `SEARXNG_SECRET`,
+`SEARXNG_PUBLISH_PORT` — см. `backend/.env.example` и `docker-compose.yml`.
