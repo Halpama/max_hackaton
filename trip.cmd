@@ -126,7 +126,7 @@ echo   logs [svc]    follow logs (default: api)
 echo   bot           MAX bot status
 echo   bot on^|off    enable/disable bot + restart api
 echo   bot mode ^<auto^|polling^|webhook^|off^>
-echo   doctor        check Docker and .env keys
+echo   doctor        check Docker, ports, and .env keys
 echo   open          open web + Swagger in browser
 echo   help          this help
 echo.
@@ -137,7 +137,25 @@ echo   Swagger  %TRIP_API_URL%/docs
 echo   Bot      %TRIP_API_URL%/api/v1/bot/status
 echo.
 echo Keys live in backend\.env (template: backend\.env.example).
+echo Yandex map tiles key: web\.env (VITE_YANDEX_MAPS_TILES_KEY) is picked up on up.
 echo On macOS/Linux use ./trip instead.
+exit /b 0
+
+:export_web_build_env
+rem Vite build args for the web image come from the compose project env, not
+rem web\.env (that file is only for npm run dev). Export from web\.env so
+rem `trip.cmd up` still bakes Yandex tiles when the key lives next to the SPA.
+set "WEB_ENV=%ROOT%\web\.env"
+if not exist "%WEB_ENV%" exit /b 0
+if defined VITE_YANDEX_MAPS_TILES_KEY exit /b 0
+set "YT_KEY="
+for /f "usebackq tokens=1,* delims==" %%A in (`findstr /B /I /C:"VITE_YANDEX_MAPS_TILES_KEY=" "%WEB_ENV%" 2^>nul`) do (
+  set "YT_KEY=%%B"
+)
+if defined YT_KEY (
+  set "YT_KEY=!YT_KEY:"=!"
+  set "VITE_YANDEX_MAPS_TILES_KEY=!YT_KEY!"
+)
 exit /b 0
 
 :up
@@ -145,8 +163,14 @@ call :need_docker
 if errorlevel 1 exit /b 1
 call :ensure_env
 if errorlevel 1 exit /b 1
+call :export_web_build_env
 echo.
 echo === Starting Trip Planner ===
+if defined VITE_YANDEX_MAPS_TILES_KEY (
+  echo -^> Yandex tiles key: from web\.env (build arg)
+) else (
+  echo [!] VITE_YANDEX_MAPS_TILES_KEY empty -^> map falls back to OpenStreetMap
+)
 echo -^> docker compose up -d --build
 docker compose up -d --build
 if errorlevel 1 exit /b 1
@@ -218,6 +242,25 @@ call :env_get MAX_BOT_WEBHOOK_URL
 if "!ENV_VAL!"=="" (echo [!] MAX_BOT_WEBHOOK_URL empty — auto uses polling) else (echo [+] MAX_BOT_WEBHOOK_URL=!ENV_VAL!)
 call :env_get MAX_WEBAPP_URL
 if "!ENV_VAL!"=="" (echo [!] MAX_WEBAPP_URL empty) else (echo [+] MAX_WEBAPP_URL=!ENV_VAL!)
+call :export_web_build_env
+if defined VITE_YANDEX_MAPS_TILES_KEY (echo [+] VITE_YANDEX_MAPS_TILES_KEY set) else (echo [!] VITE_YANDEX_MAPS_TILES_KEY empty -^> OpenStreetMap fallback)
+echo.
+echo === Ports (busy is FYI, not an error) ===
+call :check_port 3000
+call :check_port 8000
+call :check_port 5433
+call :check_port 6379
+exit /b 0
+
+:check_port
+set "CHK_PORT=%~1"
+netstat -ano | findstr /C:":%CHK_PORT% " | findstr /C:"LISTENING" >nul 2>&1
+if errorlevel 1 (
+  echo [+] :%CHK_PORT%  free
+) else (
+  echo [!] :%CHK_PORT%  already in use
+)
+set "CHK_PORT="
 exit /b 0
 
 :print_key_status
