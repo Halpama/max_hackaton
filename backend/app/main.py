@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
+from app.api.v1.trips import resume_pending_trips
 from app.bot.lifecycle import start_bot, stop_bot
 from app.cache.redis import close_redis, get_redis
 from app.core.config import settings
@@ -37,6 +38,7 @@ async def lifespan(_: FastAPI):
         logger.warning("OPENTRIPMAP_API_KEY is empty — place search will fail outside KudaGo cities")
 
     await start_bot()
+    await resume_pending_trips()
     yield
     await stop_bot()
     await close_redis()
