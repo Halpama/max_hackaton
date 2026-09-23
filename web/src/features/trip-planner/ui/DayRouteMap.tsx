@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { YANDEX_MAPS_TILES_KEY } from '@/shared/config'
 import {
   ensureMapLibreWorker,
   LngLatBounds,
@@ -27,27 +28,59 @@ const DEFAULT_CENTER: LngLat = [30.31456, 59.93984]
 const CAMERA_DURATION_MS = 850
 const ROUTE_DRAW_MS = 950
 
-const OSM_STYLE = {
-  version: 8 as const,
-  sources: {
-    osm: {
-      type: 'raster' as const,
-      tiles: [
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+function buildBasemapStyle() {
+  if (YANDEX_MAPS_TILES_KEY) {
+    const params = new URLSearchParams({
+      apikey: YANDEX_MAPS_TILES_KEY,
+      lang: 'ru_RU',
+      l: 'map',
+      projection: 'web_mercator',
+    })
+    return {
+      version: 8 as const,
+      sources: {
+        yandex: {
+          type: 'raster' as const,
+          tiles: [
+            `https://tiles.api-maps.yandex.ru/v1/tiles/?${params.toString()}&x={x}&y={y}&z={z}`,
+          ],
+          tileSize: 256,
+          attribution: '© Яндекс Карты',
+          maxzoom: 19,
+        },
+      },
+      layers: [
+        {
+          id: 'yandex',
+          type: 'raster' as const,
+          source: 'yandex',
+        },
       ],
-      tileSize: 256,
-      attribution: '&copy; OpenStreetMap',
-      maxzoom: 19,
+    }
+  }
+
+  return {
+    version: 8 as const,
+    sources: {
+      osm: {
+        type: 'raster' as const,
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '&copy; OpenStreetMap',
+        maxzoom: 19,
+      },
     },
-  },
-  layers: [
-    {
-      id: 'osm',
-      type: 'raster' as const,
-      source: 'osm',
-    },
-  ],
+    layers: [
+      {
+        id: 'osm',
+        type: 'raster' as const,
+        source: 'osm',
+      },
+    ],
+  }
 }
+
+const BASEMAP_STYLE = buildBasemapStyle()
 
 function pointsLabel(count: number) {
   if (count === 1) return 'точка'
@@ -306,7 +339,7 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
 
         const map = new Map({
           container,
-          style: OSM_STYLE,
+          style: BASEMAP_STYLE,
           center: DEFAULT_CENTER,
           zoom: 11,
           attributionControl: { compact: true },

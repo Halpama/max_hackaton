@@ -82,6 +82,7 @@ services:
       args:
         VITE_API_BASE_URL: ${WEB_API_BASE_URL:-http://localhost:8000}
         VITE_USE_MOCKS: "false"
+        VITE_YANDEX_MAPS_TILES_KEY: ${VITE_YANDEX_MAPS_TILES_KEY:-}
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-3000}:80"
