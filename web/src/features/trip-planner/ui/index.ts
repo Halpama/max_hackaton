@@ -19,6 +19,7 @@ export { OptionCard } from './OptionCard'
 export { ProgressSteps } from './ProgressSteps'
 export { ListSkeleton, LoadingView, StatusView } from './StatusView'
 export { DayTabs } from './DayTabs'
+export { CityGuidePanel } from './CityGuidePanel'
 export { HomeTabs, type HomeTab } from './HomeTabs'
 export { RouteMainTabs, type RouteMainTab } from './RouteMainTabs'
 export {

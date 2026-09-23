@@ -33,9 +33,21 @@ def plural(count: int, one: str, few: str, many: str) -> str:
     return many
 
 
-def travelers_label(count: int) -> str:
-    word = plural(count, "путешественник", "путешественника", "путешественников")
-    return f"{count} {word}"
+def travelers_label(adults: int, children: int = 0) -> str:
+    if not children:
+        word = plural(adults, "путешественник", "путешественника", "путешественников")
+        return f"{adults} {word}"
+
+    parts = [f"{adults} {plural(adults, 'взрослый', 'взрослых', 'взрослых')}" ]
+    if children:
+        parts.append(f"{children} {plural(children, 'ребёнок', 'ребёнка', 'детей')}")
+    return ", ".join(parts)
+
+
+def travelers_short_label(adults: int, children: int = 0) -> str:
+    if not children:
+        return f"{adults} чел"
+    return travelers_label(adults, children)
 
 
 def date_range_label(start: date, end: date) -> str:

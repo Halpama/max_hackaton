@@ -50,7 +50,8 @@ def trip_to_draft(trip: Trip) -> TripDraft:
         end_date=trip.end_at.date().isoformat(),
         end_time=f"{trip.end_at.hour:02d}:{trip.end_at.minute:02d}",
         budget=trip.budget,
-        travelers=trip.travelers,
+        adults=trip.adults,
+        children=trip.children,
         interests=list(trip.interests or []),
         pace=trip.pace,
         find_housing=trip.find_housing,
@@ -75,7 +76,7 @@ def trip_to_summary(trip: Trip) -> TripSummary:
         id=str(trip.id),
         city=city,
         date_label=formatting.short_date_range_label(trip.start_at.date(), trip.end_at.date()),
-        travelers_label=f"{trip.travelers} чел",
+        travelers_label=formatting.travelers_short_label(trip.adults, trip.children),
         budget_label=budget_label(trip.budget),
         status=trip.status,
     )
@@ -100,6 +101,8 @@ async def create_trip(draft: TripDraft, session: DbSession, user: CurrentUser) -
         end_at=end_at,
         budget=draft.budget,
         travelers=draft.travelers,
+        adults=draft.adults,
+        children=draft.children,
         interests=list(draft.interests),
         pace=draft.pace,
         find_housing=draft.find_housing,
@@ -113,7 +116,12 @@ async def create_trip(draft: TripDraft, session: DbSession, user: CurrentUser) -
         user_id=user.id,
         trip_id=trip.id,
         session=session,
-        payload={"destination": trip.destination, "travelers": trip.travelers},
+        payload={
+            "destination": trip.destination,
+            "travelers": trip.travelers,
+            "adults": trip.adults,
+            "children": trip.children,
+        },
     )
 
     _spawn(trip.id, draft)

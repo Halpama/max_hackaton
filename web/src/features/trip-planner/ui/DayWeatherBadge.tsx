@@ -2,20 +2,21 @@ import type { DayPlan, DayWeather, WeatherIcon } from '../model'
 import styles from './DayWeatherBadge.module.css'
 
 /**
- * Compact weather strip for a day tab. Solid atmospheric washes only —
- * no particles or looping precip textures.
+ * Compact weather strip for a day tab — quiet typography, no icon frame.
  */
 export function DayWeatherBadge({ day }: { day: DayPlan }) {
   if (!day.weather) {
     return (
       <article className={styles.root} data-tone="muted">
         <div className={styles.body}>
-          <span className={styles.glyph} aria-hidden>
+          <span className={styles.icon} aria-hidden>
             <CloudIcon />
           </span>
           <div className={styles.copy}>
-            {day.dateLabel ? <span className={styles.date}>{day.dateLabel}</span> : null}
-            <span className={styles.pending}>Прогноз появится ближе к дате</span>
+            {day.dateLabel ? (
+              <span className={styles.date}>{day.dateLabel}</span>
+            ) : null}
+            <span className={styles.pending}>Прогноз ближе к дате</span>
           </div>
         </div>
       </article>
@@ -28,24 +29,27 @@ export function DayWeatherBadge({ day }: { day: DayPlan }) {
   return (
     <article className={styles.root} data-tone={icon}>
       <div className={styles.body}>
-        <span className={styles.glyph} aria-hidden>
+        <span className={styles.icon} aria-hidden>
           <WeatherGlyph icon={icon} />
         </span>
         <div className={styles.copy}>
-          {day.dateLabel ? <span className={styles.date}>{day.dateLabel}</span> : null}
-          <span className={styles.temps}>
-            <span className={styles.tempHigh}>{formatTemp(tempHigh)}</span>
-            <span className={styles.tempSep}>/</span>
-            <span className={styles.tempLow}>{formatTemp(tempLow)}</span>
-          </span>
+          {day.dateLabel ? (
+            <span className={styles.date}>{day.dateLabel}</span>
+          ) : null}
+          <div className={styles.tempsRow}>
+            <span className={styles.temps}>
+              <span className={styles.tempHigh}>{formatTemp(tempHigh)}</span>
+              <span className={styles.tempSep}>/</span>
+              <span className={styles.tempLow}>{formatTemp(tempLow)}</span>
+            </span>
+            {rainy ? (
+              <span className={styles.precip} title="Вероятность осадков">
+                {precipitationChance}%
+              </span>
+            ) : null}
+          </div>
           <span className={styles.summary}>{label}</span>
         </div>
-        {rainy ? (
-          <span className={styles.chip} title="Вероятность осадков">
-            <DropIcon />
-            {precipitationChance}%
-          </span>
-        ) : null}
       </div>
     </article>
   )
@@ -74,12 +78,15 @@ function WeatherGlyph({ icon }: { icon: WeatherIcon }) {
   }
 }
 
+/** Line icons, currentColor — sit flush without a tile behind them. */
+
 function SunIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <circle cx="14" cy="14" r="5.5" fill="#FFCC33" />
-      <g stroke="#FFB020" strokeWidth="2" strokeLinecap="round">
-        <path d="M14 3.2v2.2M14 22.6v2.2M3.2 14h2.2M22.6 14h2.2M6.1 6.1l1.6 1.6M20.3 20.3l1.6 1.6M6.1 21.9l1.6-1.6M20.3 7.7l1.6-1.6" />
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+      <circle cx="16" cy="16" r="5" stroke="currentColor" strokeWidth="1.6" />
+      <g stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+        <path d="M16 5v2.2M16 24.8V27M5 16h2.2M24.8 16H27" />
+        <path d="m8.2 8.2 1.5 1.5M22.3 22.3l1.5 1.5M8.2 23.8l1.5-1.5M22.3 9.7l1.5-1.5" />
       </g>
     </svg>
   )
@@ -87,17 +94,12 @@ function SunIcon() {
 
 function CloudIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
       <path
-        d="M8.2 19.8h12.4a4.4 4.4 0 0 0 .45-8.78A6.1 6.1 0 0 0 8 10.2a4.2 4.2 0 0 0 .2 9.6Z"
-        fill="#EEF3F8"
-        stroke="#C5D0DC"
-        strokeWidth="1.2"
-      />
-      <path
-        d="M10.4 17.2h9a3.1 3.1 0 0 0 .3-6.18A4.4 4.4 0 0 0 10.2 10a3 3 0 0 0 .2 7.2Z"
-        fill="#FFFFFF"
-        opacity="0.85"
+        d="M9.5 21.5h12.2a3.8 3.8 0 0 0 .35-7.58A5.4 5.4 0 0 0 11.2 12a3.6 3.6 0 0 0-1.7 9.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
     </svg>
   )
@@ -105,99 +107,79 @@ function CloudIcon() {
 
 function FogIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <path
-        d="M5 11.2c2.2-1.4 4.6-.4 6.8.2 2.4.7 4.6 1.2 7-.2"
-        stroke="#8FA3B8"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M4.5 15.4c2.6 1.2 5.2.2 7.6-.4 2.6-.6 5.2-.8 7.8.6"
-        stroke="#A8B8C8"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M6 19.6c2.4-1 4.8-.2 7.1.3 2.5.6 5 .8 7.4-.3"
-        stroke="#C0CCD8"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-      />
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+      <g stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+        <path d="M7 12.5h14" />
+        <path d="M9 16.5h16" />
+        <path d="M7 20.5h13" />
+      </g>
     </svg>
   )
 }
 
 function RainIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
       <path
-        d="M8 15.6h11.6a3.9 3.9 0 0 0 .4-7.78A5.4 5.4 0 0 0 7.8 6.6 3.7 3.7 0 0 0 8 15.6Z"
-        fill="#E8EEF6"
+        d="M9.5 16.5h12.2a3.6 3.6 0 0 0 .3-7.16A5 5 0 0 0 11 8a3.4 3.4 0 0 0-1.5 8.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
-      <path d="M10.2 18.2 9 21.4" stroke="#7EB6FF" strokeWidth="2" strokeLinecap="round" />
-      <path d="M14.2 17.8 13 21" stroke="#5B9CFF" strokeWidth="2" strokeLinecap="round" />
-      <path d="M18.2 18.2 17 21.4" stroke="#7EB6FF" strokeWidth="2" strokeLinecap="round" />
+      <g stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="m11.5 19.5-.8 2.4" />
+        <path d="m16 19.2-.8 2.4" />
+        <path d="m20.5 19.5-.8 2.4" />
+      </g>
     </svg>
   )
 }
 
 function SleetIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
       <path
-        d="M8 14.8h11.6a3.9 3.9 0 0 0 .4-7.78A5.4 5.4 0 0 0 7.8 5.8 3.7 3.7 0 0 0 8 14.8Z"
-        fill="#E8EEF6"
+        d="M9.5 15.5h12.2a3.6 3.6 0 0 0 .3-7.16A5 5 0 0 0 11 7a3.4 3.4 0 0 0-1.5 8.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
-      <path d="M10.4 17.2 9.5 19.4" stroke="#7EB6FF" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M14.4 16.8 13.5 19" stroke="#7EB6FF" strokeWidth="1.8" strokeLinecap="round" />
-      <circle cx="11.2" cy="22.2" r="1.3" fill="#D6E8FF" />
-      <circle cx="16.4" cy="22.4" r="1.3" fill="#D6E8FF" />
+      <path
+        d="m12 18.2-.6 1.8M17.5 18-.6 1.8"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="13.2" cy="23.2" r="1.1" fill="currentColor" />
+      <circle cx="18.8" cy="23.4" r="1.1" fill="currentColor" />
     </svg>
   )
 }
 
 function SnowIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <path
-        d="M14 5v18M7.6 8.8l12.8 10.4M20.4 8.8 7.6 19.2"
-        stroke="#9ED0FF"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-      />
-      <path
-        d="M10.4 6.8 14 5l3.6 1.8M10.4 21.2 14 23l3.6-1.8"
-        stroke="#C7E4FF"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="14" cy="14" r="1.6" fill="#FFFFFF" />
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+      <g stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M16 7v18" />
+        <path d="m9.5 10.5 13 11" />
+        <path d="m22.5 10.5-13 11" />
+      </g>
+      <circle cx="16" cy="16" r="1.4" fill="currentColor" />
     </svg>
   )
 }
 
 function StormIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
       <path
-        d="M8 14.4h11.6a3.9 3.9 0 0 0 .4-7.78A5.4 5.4 0 0 0 7.8 5.4 3.7 3.7 0 0 0 8 14.4Z"
-        fill="#D8DEE8"
+        d="M9.5 15h12.2a3.6 3.6 0 0 0 .3-7.16A5 5 0 0 0 11 6.5 3.4 3.4 0 0 0 9.5 15Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
       <path
-        d="m12.4 14.2 3.2-5.2h-2.2L15.8 15h-2.2l2 5.2-4.6-6h1.4Z"
-        fill="#FFD166"
-      />
-    </svg>
-  )
-}
-
-function DropIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 3c3.5 5 6 8.2 6 11a6 6 0 1 1-12 0c0-2.8 2.5-6 6-11Z"
+        d="m14.2 14.5 2.8-4.5h-1.9L17.5 16h-1.9l1.7 4.6-4-6.1h.9Z"
         fill="currentColor"
       />
     </svg>
