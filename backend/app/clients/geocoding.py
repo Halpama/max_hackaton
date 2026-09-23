@@ -13,6 +13,7 @@ from app.cache import keys
 from app.cache.decorator import cached_json
 from app.clients.kudago import CITY_SLUGS
 from app.core.logging import get_logger
+from app.data.russian_cities import KNOWN_COORDS, POPULAR_CITIES, normalize_city_key
 
 logger = get_logger(__name__)
 
@@ -21,37 +22,12 @@ GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 #: Admin seats and large towns. Plain PPL without population = village noise.
 _ADMIN_FEATURE_CODES = frozenset({"PPLC", "PPLA", "PPLA2", "PPLA3", "PPLA4"})
 #: Below this a PPL is a village / suburb, not a trip destination.
-_MIN_CITY_POPULATION = 50_000
+_MIN_CITY_POPULATION = 25_000
 
-#: Shown when the field is focused with an empty query.
-POPULAR_CITIES: tuple[dict[str, str], ...] = (
-    {"name": "Москва", "subtitle": "Россия", "label": "Москва"},
-    {"name": "Санкт-Петербург", "subtitle": "Россия", "label": "Санкт-Петербург"},
-    {"name": "Казань", "subtitle": "Татарстан, Россия", "label": "Казань"},
-    {"name": "Сочи", "subtitle": "Краснодарский край, Россия", "label": "Сочи"},
-    {"name": "Екатеринбург", "subtitle": "Свердловская область, Россия", "label": "Екатеринбург"},
-    {"name": "Нижний Новгород", "subtitle": "Россия", "label": "Нижний Новгород"},
-    {"name": "Калининград", "subtitle": "Россия", "label": "Калининград"},
-    {"name": "Владивосток", "subtitle": "Россия", "label": "Владивосток"},
-)
-
-#: Last-resort coords when OpenTripMap and Open-Meteo are both unreachable.
-_KNOWN_COORDS: dict[str, tuple[float, float]] = {
-    "москва": (55.7558, 37.6173),
-    "санкт-петербург": (59.9311, 30.3609),
-    "петербург": (59.9311, 30.3609),
-    "казань": (55.7963, 49.1088),
-    "сочи": (43.6028, 39.7342),
-    "екатеринбург": (56.8389, 60.6057),
-    "нижний новгород": (56.2965, 43.9361),
-    "калининград": (54.7104, 20.4522),
-    "владивосток": (43.1155, 131.8855),
-    "махачкала": (42.9849, 47.5047),
-    "ульяновск": (54.3142, 48.4031),
-}
+_KNOWN_COORDS = KNOWN_COORDS
 
 _KNOWN_CITY_NAMES = frozenset(CITY_SLUGS) | {
-    city["name"].casefold() for city in POPULAR_CITIES
+    normalize_city_key(city["name"]) for city in POPULAR_CITIES
 } | frozenset(_KNOWN_COORDS)
 
 #: Rough mainland + Kaliningrad + Far East envelope. Rejects Africa / Americas
@@ -84,7 +60,7 @@ def is_trip_city(item: dict) -> bool:
     except (TypeError, ValueError):
         population = None
 
-    name = str(item.get("name") or "").strip().casefold()
+    name = normalize_city_key(str(item.get("name") or ""))
 
     # Namesakes of famous cities that are actually villages have no population.
     if code == "PPL" and population is None:
@@ -171,7 +147,7 @@ async def resolve_coords(name: str) -> dict[str, float | str]:
         except Exception as exc:  # noqa: BLE001 - fall through to table
             logger.warning("Open-Meteo geocode failed for %s: %s", q, exc)
 
-        known = _KNOWN_COORDS.get(q.casefold())
+        known = _KNOWN_COORDS.get(normalize_city_key(q))
         if known is not None:
             return {"lat": known[0], "lon": known[1], "name": q, "country": "RU"}
 

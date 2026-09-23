@@ -33,7 +33,7 @@ from app.schemas.trip import (
 )
 from app.services import budget as budget_service
 from app.services.audit import record_event
-from app.services import formatting, llm, opening_hours, progress, transit
+from app.services import formatting, llm, memory, opening_hours, progress, transit, web_intel
 from app.services.places import PlaceCandidate, balance_food, collect_candidates
 from app.services.scheduler import (
     PACE_ACTIVITY_COUNT,
@@ -244,6 +244,30 @@ async def build_route(
     per_day = PACE_ACTIVITY_COUNT.get(draft.pace, 5)
     needed = max(3, min(MAX_PLACES, per_day * len(slots)))
 
+    # First-party memory + thin SearXNG digests (optional).
+    discovery_hints: list[str] = []
+    city_digest: str | None = None
+    stats_map: dict = {}
+    city_mem = None
+    async with get_session_factory()() as session:
+        city_mem = await memory.load_city_memory(session, city)
+        stats_map = await memory.load_place_stats_for_city(session, city)
+        if city_mem and city_mem.radius_meters:
+            # Prefer a radius that already worked for this city.
+            analysis["radiusMeters"] = int(city_mem.radius_meters)
+        if city_mem and city_mem.discovery_hints:
+            discovery_hints = list(city_mem.discovery_hints)[:12]
+        if city_mem and city_mem.digest:
+            city_digest = city_mem.digest
+
+    live_hints, live_digest = await web_intel.discover_city_hints(
+        city, list(draft.interests)
+    )
+    if live_hints:
+        discovery_hints = list(dict.fromkeys([*live_hints, *discovery_hints]))[:16]
+    if live_digest:
+        city_digest = live_digest
+
     candidates = await collect_candidates(
         city=city,
         lat=lat,
@@ -251,6 +275,9 @@ async def build_route(
         interests=draft.interests,
         needed=needed,
         radius_meters=analysis["radiusMeters"],
+    )
+    candidates = memory.boost_candidates(
+        candidates, stats_map, hints=discovery_hints
     )
     if draft.budget <= 0:
         # 0 ₽ is an explicit free-only trip, not "budget unspecified".
@@ -260,7 +287,17 @@ async def build_route(
     if not candidates:
         raise NotFoundError(f"Не удалось найти места для «{city}»")
 
-    selected = await llm.curate_places(draft, candidates, min(needed, len(candidates)))
+    memory_block = memory.curation_memory_block(candidates, stats_map, city_mem)
+    if discovery_hints and "Часто упоминают" not in (memory_block or ""):
+        extra = "Часто упоминают: " + ", ".join(discovery_hints[:8])
+        memory_block = f"{memory_block}\n{extra}".strip() if memory_block else extra
+
+    selected = await llm.curate_places(
+        draft,
+        candidates,
+        min(needed, len(candidates)),
+        memory_block=memory_block or None,
+    )
     # One meal per day when food was asked for, none of it otherwise.
     # Free-only trips skip paid meals even if gastro was selected.
     food_wanted = (
@@ -395,6 +432,24 @@ async def build_route(
         places=places,
     )
     await stage_done("schedule")
+
+    # Persist first-party memory outside Redis so a cache flush keeps learning.
+    try:
+        async with get_session_factory()() as session:
+            await memory.record_successful_route(
+                session,
+                city=city,
+                lat=lat,
+                lon=lon,
+                radius_meters=int(analysis["radiusMeters"]),
+                interests=list(draft.interests),
+                places=list(places.values()),
+                discovery_hints=discovery_hints,
+                digest=city_digest,
+            )
+            await session.commit()
+    except Exception as exc:  # noqa: BLE001 - memory must not break generation
+        logger.warning("place/city memory write failed: %s", exc)
 
     return route
 

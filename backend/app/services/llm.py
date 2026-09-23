@@ -138,7 +138,11 @@ async def analyze_destination(draft: TripDraft) -> dict:
 
 
 async def curate_places(
-    draft: TripDraft, candidates: list[PlaceCandidate], needed: int
+    draft: TripDraft,
+    candidates: list[PlaceCandidate],
+    needed: int,
+    *,
+    memory_block: str | None = None,
 ) -> list[PlaceCandidate]:
     """Pick places and typical visit lengths; fall back to ranking on failure."""
     by_rating = sorted(candidates, key=lambda c: (c.rate, bool(c.image_url)), reverse=True)
@@ -154,6 +158,7 @@ async def curate_places(
         for i, c in enumerate(shortlist)
     )
     interests = ", ".join(INTEREST_LABELS.get(i, i) for i in draft.interests) or "любые"
+    memory = f"\nПамять сервиса (учитывай при выборе):\n{memory_block}\n" if memory_block else ""
 
     prompt = (
         f"Собери маршрут по городу для {draft.travelers} чел.\n"
@@ -162,10 +167,12 @@ async def curate_places(
         f"Бюджет на всю поездку: {draft.budget} ₽"
         + (" (только бесплатные места)" if draft.budget <= 0 else "")
         + "\n\n"
-        f"Кандидаты:\n{listing}\n\n"
+        f"Кандидаты:\n{listing}\n"
+        f"{memory}\n"
         f"Выбери ровно {needed} лучших мест в логичном порядке осмотра. "
         "Избегай дубликатов и однотипных мест подряд. "
         "Если выбраны гастро-интересы, добавь 1-2 места с едой.\n"
+        "Не предлагай отели и жильё — только точки маршрута.\n"
         "Для каждого места укажи реалистичное время визита туриста в минутах:\n"
         "• фонтан, памятник, мост, смотровая, фототочка — 15–30\n"
         "• кафе / ресторан — 45–75\n"

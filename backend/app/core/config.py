@@ -35,6 +35,8 @@ class Settings(BaseSettings):
 
     #: Internal Docker DNS by default; override for local runs outside compose.
     searxng_url: str = "http://searxng:8080"
+    #: When false, trip generation skips live web search (DB memory still used).
+    searxng_enabled: bool = True
 
     opentripmap_api_key: str = ""
     opentripmap_lang: str = "ru"

@@ -20,6 +20,14 @@ const FALLBACK_CITIES: CitySuggestion[] = [
   { name: 'Нижний Новгород', subtitle: 'Россия', label: 'Нижний Новгород' },
   { name: 'Калининград', subtitle: 'Россия', label: 'Калининград' },
   { name: 'Владивосток', subtitle: 'Россия', label: 'Владивосток' },
+  { name: 'Новосибирск', subtitle: 'Россия', label: 'Новосибирск' },
+  { name: 'Краснодар', subtitle: 'Россия', label: 'Краснодар' },
+  { name: 'Самара', subtitle: 'Россия', label: 'Самара' },
+  { name: 'Иркутск', subtitle: 'Россия', label: 'Иркутск' },
+  { name: 'Ярославль', subtitle: 'Россия', label: 'Ярославль' },
+  { name: 'Ялта', subtitle: 'Крым, Россия', label: 'Ялта' },
+  { name: 'Суздаль', subtitle: 'Владимирская область, Россия', label: 'Суздаль' },
+  { name: 'Анапа', subtitle: 'Краснодарский край, Россия', label: 'Анапа' },
 ]
 
 async function fetchSuggestions(query: string): Promise<CitySuggestion[]> {

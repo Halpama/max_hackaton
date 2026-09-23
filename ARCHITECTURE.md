@@ -328,12 +328,15 @@ flowchart TB
   CITY -->|нет / мало| OTM[OpenTripMap<br/>базовый POI-слой]
   KD --> MERGE[merge + dedupe]
   OTM --> MERGE
-  MERGE --> FREE{budget = 0?}
+  MERGE --> MEM[Postgres place_stats / city_memory]
+  MEM --> SX[SearXNG thin digests]
+  SX --> FREE{budget = 0?}
   FREE -->|да| FREEONLY[только free candidates]
   FREE -->|нет| ALL[полный пул]
   FREEONLY --> LLM[GigaChat curate]
   ALL --> LLM
   LLM --> PLAN[RoutePlan]
+  PLAN --> MEM
 
   PLAN --> WX{Дата ≤ 16 дней?}
   WX -->|да| OM[Open-Meteo weather]
@@ -346,13 +349,14 @@ flowchart TB
 | KudaGo | нет | приоритет для 12 городов |
 | OpenTripMap | да | фолбэк / дополнение POI |
 | GigaChat | да | город + отбор мест; опционально tools + SearXNG |
-| SearXNG | нет | локальный web search для demo tool-loop |
+| SearXNG | нет | thin digests в stage `places` + demo tool-loop |
+| Postgres `place_stats` / `city_memory` | — | first-party память после успешного RoutePlan (не кэш) |
 | openrouteservice | да | время в пути (фолбэк OSRM) |
 | Open-Meteo Forecast | нет | погода по дням |
 | Wikipedia | нет | превью города на главной (клиент) |
 
-`complete_with_tools` + `scripts/gigachat_search_demo.py` — инфраструктура и демо.
-В 5-стадийный пайплайн поездки web search пока **не** вшит.
+`complete_with_tools` + `scripts/gigachat_search_demo.py` — демо tool-loop.
+В пайплайне SearXNG даёт короткие discovery hints; полные HTML-страницы в СУБД не пишутся.
 
 ---
 

@@ -141,6 +141,44 @@ class LedgerEntry(Base):
 Index("ix_ledger_trip_date", LedgerEntry.trip_id, LedgerEntry.entry_date)
 
 
+class PlaceStats(Base, TimestampMixin):
+    """First-party popularity signals — survives Redis flush, license-safe."""
+
+    __tablename__ = "place_stats"
+
+    external_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    city: Mapped[str] = mapped_column(String(128), index=True)
+    title: Mapped[str] = mapped_column(String(256))
+    category: Mapped[str | None] = mapped_column(String(128))
+    category_kind: Mapped[str | None] = mapped_column(String(32))
+    lat: Mapped[float | None] = mapped_column()
+    lon: Mapped[float | None] = mapped_column()
+    pick_count: Mapped[int] = mapped_column(Integer, default=0)
+    stay_minutes_sum: Mapped[int] = mapped_column(Integer, default=0)
+    stay_samples: Mapped[int] = mapped_column(Integer, default=0)
+    source_name: Mapped[str | None] = mapped_column(String(64))
+    source_url: Mapped[str | None] = mapped_column(String(512))
+    #: Short first-party note (never a full third-party article dump).
+    tip: Mapped[str | None] = mapped_column(Text)
+    interests: Mapped[dict] = mapped_column(JsonColumn, default=dict)
+
+
+class CityMemory(Base, TimestampMixin):
+    """Per-city playbook learned from successful generations + thin web digests."""
+
+    __tablename__ = "city_memory"
+
+    city_key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    display_name: Mapped[str] = mapped_column(String(256))
+    lat: Mapped[float | None] = mapped_column()
+    lon: Mapped[float | None] = mapped_column()
+    radius_meters: Mapped[int | None] = mapped_column(Integer)
+    trip_count: Mapped[int] = mapped_column(Integer, default=0)
+    #: Thin search titles / phrases used to boost discovery (not full HTML).
+    discovery_hints: Mapped[list] = mapped_column(JsonColumn, default=list)
+    digest: Mapped[str | None] = mapped_column(Text)
+
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
 

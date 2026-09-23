@@ -4,7 +4,6 @@ import { Button } from '@maxhub/max-ui'
 import { ROUTES, USE_MOCKS } from '@/shared/config'
 import {
   InterestChips,
-  OptionCard,
   PaceSegment,
   Screen,
   Section,
@@ -14,7 +13,7 @@ import { createTrip } from '@/features/trip-planner/api'
 
 export function PreferencesPage() {
   const navigate = useNavigate()
-  const { draft, toggleInterest, setPace, updateDraft } = useTripPlanner()
+  const { draft, toggleInterest, setPace } = useTripPlanner()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -64,18 +63,6 @@ export function PreferencesPage() {
         hint="Спокойный — меньше дел в день, активный — насыщенный график."
       >
         <PaceSegment value={draft.pace} onChange={setPace} />
-      </Section>
-
-      <Section
-        label="Дополнительно"
-        hint="Можем подобрать варианты жилья рядом с маршрутом."
-      >
-        <OptionCard
-          title="Подобрать жилье"
-          description="Рекомендации отелей от ИИ"
-          checked={draft.findHousing}
-          onChange={(checked) => updateDraft({ findHousing: checked })}
-        />
       </Section>
 
       {error ? (
