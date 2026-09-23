@@ -1,11 +1,13 @@
 import asyncio
+import os
+import tempfile
 
 import fakeredis.aioredis
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool
 
 from app.cache.redis import set_redis
 from app.core.config import settings
@@ -44,9 +46,15 @@ async def redis_client():
 
 @pytest_asyncio.fixture(autouse=True)
 async def database():
+    # A file DB with NullPool: every session gets its own connection. The
+    # in-memory StaticPool shared one SQLite connection between the HTTP
+    # request and the background generate_trip task, which raced commits
+    # ("cannot commit transaction - SQL statements in progress").
+    fd, db_path = tempfile.mkstemp(prefix="trip-test-", suffix=".sqlite3")
+    os.close(fd)
     engine = create_async_engine(
-        "sqlite+aiosqlite://",
-        poolclass=StaticPool,
+        f"sqlite+aiosqlite:///{db_path}",
+        poolclass=NullPool,
         connect_args={"check_same_thread": False},
     )
     async with engine.begin() as conn:
@@ -59,9 +67,7 @@ async def database():
 
     yield engine
 
-    # A test may leave a trip-generation task mid-flight (e.g. rate-limit POSTs
-    # that only check the 429). Cancel it before disposing the StaticPool —
-    # otherwise the task races dispose and SQLAlchemy raises KeyError.
+    # Cancel leftover generation tasks so they cannot touch the engine mid-dispose.
     from app.api.v1 import trips as trips_module
 
     pending = [task for task in trips_module._background_tasks if not task.done()]
@@ -75,6 +81,10 @@ async def database():
     await engine.dispose()
     session_module._engine = None
     session_module._session_factory = None
+    try:
+        os.unlink(db_path)
+    except OSError:
+        pass
 
 
 @pytest_asyncio.fixture
