@@ -14,25 +14,36 @@ import {
   type Place,
 } from '@/features/trip-planner'
 import { getPlace } from '@/features/trip-planner/api'
+import {
+  tripRoutePath,
+  type PlaceNavState,
+} from '@/features/trip-planner/ui/BottomNav'
+import { yandexMapsPointUrl } from '@/shared/lib/yandex'
 import tripStyles from '@/features/trip-planner/ui/trip.module.css'
+
+function readNavState(state: unknown): PlaceNavState | null {
+  if (!state || typeof state !== 'object') return null
+  const navFrom = (state as PlaceNavState).navFrom
+  if (navFrom !== 'trip' && navFrom !== 'favorites') return null
+  return state as PlaceNavState
+}
 
 export function LocationDetailPage() {
   const { placeId = '' } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const { isFavorite, toggleFavorite, findPlace } = useTripPlanner()
+  const { isFavorite, toggleFavorite, findPlace, activeTripId } = useTripPlanner()
 
   const cached = findPlace(placeId)
   const [fetched, setFetched] = useState<Place | undefined>(undefined)
   const [failed, setFailed] = useState(false)
   const place = cached ?? (fetched?.id === placeId ? fetched : undefined)
 
-  const fromFavorites =
-    Boolean(location.state) &&
-    typeof location.state === 'object' &&
-    (location.state as { navFrom?: string }).navFrom === 'favorites'
-
-  const backTarget = fromFavorites ? `${ROUTES.home}?tab=favorites` : ROUTES.route
+  const navState = readNavState(location.state)
+  const fromFavorites = navState?.navFrom === 'favorites'
+  const backTarget = fromFavorites
+    ? `${ROUTES.home}?tab=favorites`
+    : tripRoutePath(navState?.tripId ?? activeTripId, navState?.dayId)
 
   // Deep links and reloads land here without the route in memory.
   useEffect(() => {
@@ -82,7 +93,7 @@ export function LocationDetailPage() {
           <SecondaryButton
             onClick={() => {
               window.open(
-                `https://yandex.ru/maps/?text=${encodeURIComponent(place.address)}`,
+                yandexMapsPointUrl(place.coordinates),
                 '_blank',
                 'noopener,noreferrer',
               )

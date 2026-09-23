@@ -44,9 +44,56 @@ def test_date_range_label():
 
 def test_budget_label_and_prices():
     assert budget.budget_label(45000) == "~45 000 ₽"
+    assert budget.budget_label(0) == "0 ₽"
     assert budget.price_label(0, approximate=False) == "Бесплатно"
     assert budget.price_label(800, approximate=False) == "800 ₽ · за 1 чел"
     assert budget.price_label(1500, approximate=True, travelers=2) == "~1 500 ₽ · на 2 чел"
+
+
+def test_zero_budget_is_free_only():
+    from app.services.places import PlaceCandidate
+
+    paid = PlaceCandidate(
+        xid="m1",
+        title="Музей",
+        coordinates=(30.0, 59.0),
+        kinds=["museums"],
+        rate=5,
+        category="Музей",
+        category_kind="museum",
+        address="",
+        description="",
+        image_url="",
+        city="Санкт-Петербург",
+    )
+    free = PlaceCandidate(
+        xid="p1",
+        title="Парк",
+        coordinates=(30.1, 59.1),
+        kinds=["gardens_and_parks"],
+        rate=5,
+        category="Парк",
+        category_kind="walk",
+        address="",
+        description="",
+        image_url="",
+        city="Санкт-Петербург",
+    )
+    assert budget.is_free_candidate(free)
+    assert not budget.is_free_candidate(paid)
+    assert budget.compute_scale([paid, free], 0, 1) == 0.0
+    value, label, _ = budget.price_for(paid, scale=0.0, travelers=1)
+    assert value is None and label == "Бесплатно"
+
+
+def test_russia_bbox_rejects_africa():
+    from app.clients.geocoding import in_russia
+
+    assert in_russia(42.98, 47.50)  # Makhachkala
+    assert in_russia(55.75, 37.62)  # Moscow
+    assert not in_russia(-18.9, 47.5)  # Madagascar-ish
+    assert not in_russia(36.8, 10.2)  # Tunis
+
 
 
 @pytest.mark.parametrize(

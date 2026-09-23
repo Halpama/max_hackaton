@@ -16,7 +16,10 @@ import {
 } from '@/features/trip-planner'
 import { DayRouteMap } from '@/features/trip-planner/ui/DayRouteMap'
 import { DayWeatherBadge } from '@/features/trip-planner/ui/DayWeatherBadge'
-import { parseTripTab, placeNavState } from '@/features/trip-planner/ui/BottomNav'
+import {
+  placeNavState,
+  parseTripTab,
+} from '@/features/trip-planner/ui/BottomNav'
 import { PackingPanel } from '@/features/trip-planner/ui/PackingPanel'
 import { BudgetPanel } from '@/features/trip-planner/ui/BudgetPanel'
 import {
@@ -27,12 +30,13 @@ import styles from '@/features/trip-planner/ui/screens.module.css'
 
 export function ReadyRoutePage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { route, routeState, routeError, activeTripId, openTrip, draft } = useTripPlanner()
 
   const requestedTripId = searchParams.get('tripId')
+  const requestedDayId = searchParams.get('day')
   const mainTab = parseTripTab(searchParams.get('tab'))
-  const [activeDayId, setActiveDayId] = useState('')
+  const [activeDayId, setActiveDayId] = useState(requestedDayId ?? '')
 
   // A link or reload can point at a different trip than the one in memory.
   useEffect(() => {
@@ -40,6 +44,26 @@ export function ReadyRoutePage() {
       void openTrip(requestedTripId)
     }
   }, [requestedTripId, activeTripId, openTrip])
+
+  // Keep the open day across place detail round-trips via ?day=.
+  useEffect(() => {
+    if (!route) return
+    if (requestedDayId && route.days.some((item) => item.id === requestedDayId)) {
+      setActiveDayId(requestedDayId)
+      return
+    }
+    if (!activeDayId || !route.days.some((item) => item.id === activeDayId)) {
+      setActiveDayId(route.days[0]?.id ?? '')
+    }
+  }, [route, requestedDayId, activeDayId])
+
+  const selectDay = (dayId: string) => {
+    setActiveDayId(dayId)
+    const next = new URLSearchParams(searchParams)
+    next.set('day', dayId)
+    if (activeTripId) next.set('tripId', activeTripId)
+    setSearchParams(next, { replace: true })
+  }
 
   const day = useMemo(() => {
     if (!route) return undefined
@@ -54,7 +78,8 @@ export function ReadyRoutePage() {
   }, [day, route])
 
   const tripId = activeTripId ?? ''
-  const plannedBudget = draft.budget > 0 ? draft.budget : 45_000
+  // Never invent a fake planned budget — 0 ₽ means a free trip.
+  const plannedBudget = Math.max(0, draft.budget)
 
   const {
     packing,
@@ -87,6 +112,8 @@ export function ReadyRoutePage() {
           text={routeError ?? 'Создайте новую поездку, чтобы увидеть маршрут.'}
           actionLabel="Новая поездка"
           onAction={() => navigate(ROUTES.newTrip)}
+          secondaryActionLabel="На главную"
+          onSecondaryAction={() => navigate(ROUTES.home)}
         />
       </Screen>
     )
@@ -97,7 +124,7 @@ export function ReadyRoutePage() {
       <div className={styles.summary}>
         <div className={styles.top}>
           <h1 className={styles.city}>{route.city}</h1>
-          <RemainingBadge remaining={remaining} />
+          <RemainingBadge remaining={remaining} plannedBudget={plannedBudget} />
         </div>
         <p className={styles.meta}>
           <span className={styles.metaItem}>
@@ -127,7 +154,7 @@ export function ReadyRoutePage() {
                 <DayTabs
                   days={route.days.map(({ id, label }) => ({ id, label }))}
                   activeId={day.id}
-                  onChange={setActiveDayId}
+                  onChange={selectDay}
                 />
                 <DayWeatherBadge key={day.id} day={day} />
               </div>
@@ -150,7 +177,10 @@ export function ReadyRoutePage() {
                         category={fromPlace?.category}
                         onClick={() =>
                           navigate(ROUTES.place(activity.placeId), {
-                            state: placeNavState('trip'),
+                            state: placeNavState('trip', {
+                              tripId,
+                              dayId: day.id,
+                            }),
                           })
                         }
                       />
@@ -173,6 +203,8 @@ export function ReadyRoutePage() {
               text="Попробуйте создать поездку заново с другими интересами."
               actionLabel="Новая поездка"
               onAction={() => navigate(ROUTES.newTrip)}
+              secondaryActionLabel="На главную"
+              onSecondaryAction={() => navigate(ROUTES.home)}
             />
           )}
         </div>
@@ -202,7 +234,27 @@ export function ReadyRoutePage() {
   )
 }
 
-function RemainingBadge({ remaining }: { remaining: number }) {
+function RemainingBadge({
+  remaining,
+  plannedBudget,
+}: {
+  remaining: number
+  plannedBudget: number
+}) {
+  if (plannedBudget <= 0) {
+    return (
+      <span className={styles.badge} title="Бесплатный маршрут">
+        <span className={styles.badgeStack}>
+          <span className={styles.badgePrefix}>Бюджет</span>
+          <span className={styles.badgeAmount}>
+            <span className={styles.badgeValue}>0</span>
+            <span className={styles.badgeCurrency}>₽</span>
+          </span>
+        </span>
+      </span>
+    )
+  }
+
   const overspent = remaining < 0
 
   return (

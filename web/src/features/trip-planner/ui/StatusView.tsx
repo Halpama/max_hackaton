@@ -8,6 +8,8 @@ interface StatusViewProps {
   text?: string
   actionLabel?: string
   onAction?: () => void
+  secondaryActionLabel?: string
+  onSecondaryAction?: () => void
 }
 
 /** Centred empty / error state used while the backend has nothing to show yet. */
@@ -18,7 +20,12 @@ export function StatusView({
   text,
   actionLabel,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
 }: StatusViewProps) {
+  const hasPrimary = Boolean(actionLabel && onAction)
+  const hasSecondary = Boolean(secondaryActionLabel && onSecondaryAction)
+
   return (
     <div className={styles.root} role="status">
       {icon ? (
@@ -26,10 +33,23 @@ export function StatusView({
       ) : null}
       <h2 className={styles.title}>{title}</h2>
       {text ? <p className={styles.text}>{text}</p> : null}
-      {actionLabel && onAction ? (
-        <button type="button" className={styles.action} onClick={onAction}>
-          {actionLabel}
-        </button>
+      {hasPrimary || hasSecondary ? (
+        <div className={styles.actions}>
+          {hasPrimary ? (
+            <button type="button" className={styles.action} onClick={onAction}>
+              {actionLabel}
+            </button>
+          ) : null}
+          {hasSecondary ? (
+            <button
+              type="button"
+              className={styles.actionSecondary}
+              onClick={onSecondaryAction}
+            >
+              {secondaryActionLabel}
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   )

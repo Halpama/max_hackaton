@@ -56,9 +56,33 @@
   transition: background 160ms ease, transform 160ms ease;
 }
 
+.actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.actions .action {
+  margin-top: 0;
+}
+
+.actionSecondary {
+  composes: action;
+  margin-top: 0;
+  background: transparent;
+  color: var(--tp-primary);
+  box-shadow: inset 0 0 0 1.5px var(--tp-primary);
+}
+
 .action:active {
   transform: scale(0.97);
   background: var(--tp-primary-deep);
+}
+
+.actionSecondary:active {
+  background: var(--tp-primary-soft);
 }
 
 .spinner {

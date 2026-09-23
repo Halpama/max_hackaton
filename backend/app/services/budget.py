@@ -55,9 +55,18 @@ def base_cost(candidate: PlaceCandidate) -> float:
     return base * (0.6 + popularity / 7 * 0.7)
 
 
+def is_free_candidate(candidate: PlaceCandidate) -> bool:
+    """True when the stop has no typical ticket / meal cost."""
+    return base_cost(candidate) <= 0
+
+
 def compute_scale(candidates: list[PlaceCandidate], budget: int, travelers: int) -> float:
+    # Explicit 0 ₽ means a free-only trip — do not invent paid prices.
+    if budget <= 0:
+        return 0.0
+
     base_total = sum(base_cost(c) for c in candidates) * max(travelers, 1)
-    if base_total <= 0 or budget <= 0:
+    if base_total <= 0:
         return 1.0
 
     available = budget * ACTIVITY_BUDGET_SHARE
@@ -74,7 +83,7 @@ def price_for(
     guess and says so. "Бесплатно" for a park or a square is not a guess.
     """
     base = base_cost(candidate)
-    if base <= 0:
+    if base <= 0 or scale <= 0:
         return None, "Бесплатно", False
 
     party = max(travelers, 1)
@@ -94,5 +103,5 @@ def price_for(
 
 def budget_label(budget: int) -> str:
     if budget <= 0:
-        return "Бюджет не задан"
+        return "0 ₽"
     return f"~{format_money(budget)} ₽"

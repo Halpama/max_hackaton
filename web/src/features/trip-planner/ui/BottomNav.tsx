@@ -48,8 +48,21 @@ function resolveContext(
 
 export type PlaceNavFrom = 'trip' | 'favorites'
 
-export function placeNavState(from: PlaceNavFrom): { navFrom: PlaceNavFrom } {
-  return { navFrom: from }
+export type PlaceNavState = {
+  navFrom: PlaceNavFrom
+  tripId?: string
+  dayId?: string
+}
+
+export function placeNavState(
+  from: PlaceNavFrom,
+  extras?: { tripId?: string; dayId?: string },
+): PlaceNavState {
+  return {
+    navFrom: from,
+    tripId: extras?.tripId,
+    dayId: extras?.dayId,
+  }
 }
 
 function getPlaceNavFrom(state: unknown): PlaceNavFrom | null {
@@ -57,6 +70,23 @@ function getPlaceNavFrom(state: unknown): PlaceNavFrom | null {
   const navFrom = (state as { navFrom?: unknown }).navFrom
   if (navFrom === 'trip' || navFrom === 'favorites') return navFrom
   return null
+}
+
+function readPlaceNavExtras(state: unknown): { tripId?: string; dayId?: string } {
+  if (!state || typeof state !== 'object') return {}
+  const raw = state as { tripId?: unknown; dayId?: unknown }
+  return {
+    tripId: typeof raw.tripId === 'string' ? raw.tripId : undefined,
+    dayId: typeof raw.dayId === 'string' ? raw.dayId : undefined,
+  }
+}
+
+export function tripRoutePath(tripId?: string | null, dayId?: string | null): string {
+  const params = new URLSearchParams()
+  if (tripId) params.set('tripId', tripId)
+  if (dayId) params.set('day', dayId)
+  const query = params.toString()
+  return query ? `${ROUTES.route}?${query}` : ROUTES.route
 }
 
 export function BottomNav() {
@@ -67,6 +97,7 @@ export function BottomNav() {
   const onPlace = location.pathname.startsWith('/places/')
   const context = resolveContext(location.pathname, location.state)
   const closeMode = onPlace && placeFrom !== 'favorites'
+  const activeTripFromQuery = searchParams.get('tripId')
   const homeTab =
     onPlace && placeFrom === 'favorites'
       ? 'favorites'
@@ -75,6 +106,16 @@ export function BottomNav() {
         : 'trips'
   const tripTab = parseTripTab(searchParams.get('tab'))
   const tripActiveTab = closeMode ? 'route' : tripTab
+  const dayFromQuery = searchParams.get('day')
+
+  const tripHref = (tab?: TripNavTab) => {
+    const params = new URLSearchParams()
+    if (activeTripFromQuery) params.set('tripId', activeTripFromQuery)
+    if (dayFromQuery) params.set('day', dayFromQuery)
+    if (tab && tab !== 'route') params.set('tab', tab)
+    const query = params.toString()
+    return query ? `${ROUTES.route}?${query}` : ROUTES.route
+  }
 
   const items = useMemo<NavItem[]>(() => {
     if (context === 'trip') {
@@ -84,21 +125,21 @@ export function BottomNav() {
           label: 'Маршрут',
           icon: <MapIcon />,
           active: tripActiveTab === 'route',
-          onSelect: () => navigate(ROUTES.route),
+          onSelect: () => navigate(tripHref('route')),
         },
         {
           id: 'packing',
           label: 'Сборы',
           icon: <BagIcon />,
           active: tripActiveTab === 'packing',
-          onSelect: () => navigate(`${ROUTES.route}?tab=packing`),
+          onSelect: () => navigate(tripHref('packing')),
         },
         {
           id: 'budget',
           label: 'Бюджет',
           icon: <RubleIcon />,
           active: tripActiveTab === 'budget',
-          onSelect: () => navigate(`${ROUTES.route}?tab=budget`),
+          onSelect: () => navigate(tripHref('budget')),
         },
         {
           id: 'trips',
@@ -134,7 +175,7 @@ export function BottomNav() {
         onSelect: () => navigate(`${ROUTES.home}?tab=favorites`),
       },
     ]
-  }, [context, homeTab, navigate, tripActiveTab])
+  }, [context, homeTab, navigate, tripActiveTab, activeTripFromQuery, dayFromQuery])
 
   const activeIndex = Math.max(
     0,
@@ -320,7 +361,10 @@ export function BottomNav() {
             type="button"
             className={styles.closeBtn}
             aria-label="Закрыть"
-            onClick={() => navigate(ROUTES.route)}
+            onClick={() => {
+              const extras = readPlaceNavExtras(location.state)
+              navigate(tripRoutePath(extras.tripId ?? activeTripFromQuery, extras.dayId))
+            }}
           >
             <CloseIcon />
           </button>

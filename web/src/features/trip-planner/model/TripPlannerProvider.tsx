@@ -28,7 +28,7 @@ import {
   type TripPace,
   type TripSummary,
 } from './types'
-import { dateTimeToMs, shiftDateTime } from '../lib/format'
+import { dateTimeToMs, localDateIso, shiftDateTime } from '../lib/format'
 
 const ACTIVE_TRIP_KEY = 'tp-active-trip'
 const MIN_TRIP_MS = MIN_TRIP_DURATION_HOURS * 3_600_000
@@ -60,6 +60,12 @@ function applyDraftPatch(patch: Partial<TripDraft>, prev: TripDraft): TripDraft 
 
   if (typeof patch.budget === 'number') {
     next.budget = Math.min(MAX_TRIP_BUDGET, Math.max(0, Math.floor(patch.budget)))
+  }
+
+  const today = localDateIso()
+  // Quietly block past arrival dates — no red error copy.
+  if (next.startDate < today) {
+    next.startDate = today
   }
 
   const touchedStart = patch.startDate != null || patch.startTime != null
@@ -209,9 +215,11 @@ export function TripPlannerProvider({ children }: { children: ReactNode }) {
 
       if (trip.route) {
         setRoute(trip.route)
+        setDraft(trip.draft)
         setRouteState('ready')
       } else {
         setRoute(null)
+        setDraft(trip.draft)
         setRouteState('error')
         setRouteError(trip.error ?? 'Маршрут ещё не построен')
       }

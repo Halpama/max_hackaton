@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from app.cache import keys
 from app.cache.decorator import cached_json
-from app.clients.geocoding import resolve_coords
+from app.clients.geocoding import in_russia, resolve_coords
 from app.clients.opentripmap import opentripmap
 from app.clients.weather import weather as weather_client
 from app.core.config import settings
@@ -118,6 +118,71 @@ async def _day_forecast(*, lat: float, lon: float, slots: list) -> dict[str, Day
     return {iso: DayWeather(**payload) for iso, payload in raw.items()}
 
 
+def _coords_ok(geo: dict) -> bool:
+    try:
+        lat, lon = float(geo["lat"]), float(geo["lon"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    country = str(geo.get("country") or "").upper()
+    if country and country != "RU":
+        return False
+    return in_russia(lat, lon)
+
+
+async def _resolve_trip_coords(
+    *,
+    draft_destination: str,
+    city: str,
+    geo_query: str,
+) -> tuple[float, float]:
+    """Resolve itinerary centre inside Russia.
+
+    Open-Meteo (RU) first — same source as city autocomplete — so an LLM
+    latinisation cannot send the route to Africa via OpenTripMap geoname.
+    """
+    queries: list[str] = []
+    for value in (draft_destination, city, geo_query):
+        cleaned = (value or "").strip()
+        if cleaned and cleaned.casefold() not in {q.casefold() for q in queries}:
+            queries.append(cleaned)
+
+    last_error: Exception | None = None
+    for query in queries:
+        try:
+            geo = await resolve_coords(query)
+            if _coords_ok(geo):
+                return float(geo["lat"]), float(geo["lon"])
+            logger.warning(
+                "Rejecting out-of-Russia coords for %s: %s,%s",
+                query,
+                geo.get("lat"),
+                geo.get("lon"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            logger.warning("Open-Meteo resolve failed for %s: %s", query, exc)
+
+    for query in queries:
+        try:
+            geo = await opentripmap.geoname(query)
+            if _coords_ok(geo):
+                return float(geo["lat"]), float(geo["lon"])
+            logger.warning(
+                "OpenTripMap geoname outside Russia for %s: %s,%s country=%s",
+                query,
+                geo.get("lat"),
+                geo.get("lon"),
+                geo.get("country"),
+            )
+        except (UpstreamError, NotFoundError, AppError) as exc:
+            last_error = exc
+            logger.warning("OpenTripMap geoname failed for %s: %s", query, exc)
+
+    raise NotFoundError(
+        f"Не удалось найти координаты для «{city or draft_destination}»"
+    ) from last_error
+
+
 async def build_route(
     draft: TripDraft,
     trip_id: uuid.UUID,
@@ -170,22 +235,11 @@ async def build_route(
 
     # 2. Подбор мест
     await stage_start("places")
-    geo_query = analysis["geoQuery"]
-    try:
-        geo = await opentripmap.geoname(geo_query)
-    except (UpstreamError, NotFoundError, AppError) as exc:
-        logger.warning("OpenTripMap geoname failed (%s), falling back to Open-Meteo", exc)
-        try:
-            geo = await resolve_coords(geo_query)
-        except Exception as geo_exc:  # noqa: BLE001
-            # Last try: display city name from the LLM / draft.
-            try:
-                geo = await resolve_coords(city)
-            except Exception:
-                raise NotFoundError(
-                    f"Не удалось найти координаты для «{city}»"
-                ) from geo_exc
-    lat, lon = float(geo["lat"]), float(geo["lon"])
+    lat, lon = await _resolve_trip_coords(
+        draft_destination=draft.destination,
+        city=city,
+        geo_query=str(analysis.get("geoQuery") or ""),
+    )
 
     per_day = PACE_ACTIVITY_COUNT.get(draft.pace, 5)
     needed = max(3, min(MAX_PLACES, per_day * len(slots)))
@@ -198,14 +252,25 @@ async def build_route(
         needed=needed,
         radius_meters=analysis["radiusMeters"],
     )
+    if draft.budget <= 0:
+        # 0 ₽ is an explicit free-only trip, not "budget unspecified".
+        free = [c for c in candidates if budget_service.is_free_candidate(c)]
+        if free:
+            candidates = free
     if not candidates:
         raise NotFoundError(f"Не удалось найти места для «{city}»")
 
     selected = await llm.curate_places(draft, candidates, min(needed, len(candidates)))
     # One meal per day when food was asked for, none of it otherwise.
-    selected = balance_food(
-        selected, candidates, wanted=len(slots) if "gastro" in draft.interests else 0
+    # Free-only trips skip paid meals even if gastro was selected.
+    food_wanted = (
+        0
+        if draft.budget <= 0
+        else (len(slots) if "gastro" in draft.interests else 0)
     )
+    selected = balance_food(selected, candidates, wanted=food_wanted)
+    if draft.budget <= 0:
+        selected = [c for c in selected if budget_service.is_free_candidate(c)] or selected
     await stage_done("places")
 
     # 3. Расчёт времени в пути

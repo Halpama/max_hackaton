@@ -109,7 +109,7 @@ async def analyze_destination(draft: TripDraft) -> dict:
         f"Темп: {PACE_LABELS.get(draft.pace, draft.pace)}\n\n"
         "Верни СТРОГО один JSON-объект без пояснений и markdown:\n"
         '{"city": "каноничное название города по-русски", '
-        '"geoQuery": "название города латиницей для геокодера", '
+        '"geoQuery": "то же название по-русски для геокодера (НЕ латиница, НЕ другой город)", '
         '"radiusMeters": число от 3000 до 15000 — радиус поиска мест от центра}'
     )
 
@@ -159,7 +159,9 @@ async def curate_places(
         f"Собери маршрут по городу для {draft.travelers} чел.\n"
         f"Интересы: {interests}\n"
         f"Темп: {PACE_LABELS.get(draft.pace, draft.pace)}\n"
-        f"Бюджет на всю поездку: {draft.budget} ₽\n\n"
+        f"Бюджет на всю поездку: {draft.budget} ₽"
+        + (" (только бесплатные места)" if draft.budget <= 0 else "")
+        + "\n\n"
         f"Кандидаты:\n{listing}\n\n"
         f"Выбери ровно {needed} лучших мест в логичном порядке осмотра. "
         "Избегай дубликатов и однотипных мест подряд. "

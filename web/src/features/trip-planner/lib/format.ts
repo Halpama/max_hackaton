@@ -2,6 +2,17 @@ export function formatBudget(value: number): string {
   return value.toLocaleString('ru-RU')
 }
 
+/** Local calendar day as YYYY-MM-DD (noon to avoid DST edge cases). */
+export function localDateIso(offsetDays = 0): string {
+  const d = new Date()
+  d.setHours(12, 0, 0, 0)
+  d.setDate(d.getDate() + offsetDays)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 /** Capitalise the first letter — catalogues often ship lowercase Russian titles. */
 export function formatPlaceTitle(title: string): string {
   const trimmed = title.trim().replace(/\s+/g, ' ')

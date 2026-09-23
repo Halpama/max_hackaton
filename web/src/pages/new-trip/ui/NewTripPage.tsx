@@ -5,6 +5,7 @@ import {
   CityField,
   DateField,
   formatBudget,
+  localDateIso,
   formatTravelers,
   MAX_TRIP_BUDGET,
   PersonIcon,
@@ -24,6 +25,9 @@ export function NewTripPage() {
   const { draft, updateDraft, setTravelers } = useTripPlanner()
 
   const canContinue = draft.destination.trim().length > 0
+  const today = localDateIso()
+  const startMin = today
+  const endMin = draft.startDate > today ? draft.startDate : today
 
   return (
     <Screen
@@ -53,13 +57,14 @@ export function NewTripPage() {
 
       <Section
         label="Даты"
-        hint={`Приезд — любой. Выезд по умолчанию через ${DEFAULT_TRIP_DURATION_DAYS} дня; короче минимальной длительности поставить нельзя.`}
+        hint={`Приезд — не раньше сегодня. Выезд по умолчанию через ${DEFAULT_TRIP_DURATION_DAYS} дня; короче минимальной длительности поставить нельзя.`}
       >
         <div className={tripStyles.datesStack}>
           <div className={tripStyles.dateTimeRow}>
             <DateField
               label="Приезд"
               value={draft.startDate}
+              min={startMin}
               onChange={(startDate) => updateDraft({ startDate })}
             />
             <TimeField
@@ -72,6 +77,7 @@ export function NewTripPage() {
             <DateField
               label="Выезд"
               value={draft.endDate}
+              min={endMin}
               onChange={(endDate) => updateDraft({ endDate })}
             />
             <TimeField
@@ -85,7 +91,7 @@ export function NewTripPage() {
 
       <Section
         label="Бюджет"
-        hint={`Сколько планируете потратить на всю поездку. До ${formatBudget(MAX_TRIP_BUDGET)} ₽.`}
+        hint={`Сколько планируете потратить. 0 ₽ — только бесплатные места. До ${formatBudget(MAX_TRIP_BUDGET)} ₽.`}
       >
         <TextField
           icon={<RubleIcon />}
@@ -112,3 +118,4 @@ export function NewTripPage() {
     </Screen>
   )
 }
+

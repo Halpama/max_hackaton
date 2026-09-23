@@ -101,6 +101,8 @@ export function RouteLoadingPage() {
           text={message}
           actionLabel={tripId ? 'Попробовать снова' : 'Новая поездка'}
           onAction={handleRetry}
+          secondaryActionLabel="На главную"
+          onSecondaryAction={() => navigate(ROUTES.home, { replace: true })}
         />
       </Screen>
     )
