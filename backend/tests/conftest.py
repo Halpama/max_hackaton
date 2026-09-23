@@ -26,6 +26,8 @@ def dev_auth():
     settings.ors_api_key = ""
     # A developer .env may enable the bot; webhook tests must stay deterministic.
     settings.max_bot_enabled = False
+    # Polling loops in tests would trip the limiter; rate-limit tests opt in.
+    settings.rate_limit_enabled = False
     yield
 
 
