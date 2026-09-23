@@ -36,8 +36,13 @@ async def record_event(
         payload=payload,
     )
     if session is not None:
-        session.add(event)
-        await session.flush()
+        try:
+            async with session.begin_nested():
+                session.add(event)
+                await session.flush()
+        except Exception:
+            # Keep the business transaction usable when the audit table is unavailable.
+            return
         return
 
     try:

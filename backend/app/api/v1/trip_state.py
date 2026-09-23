@@ -93,7 +93,9 @@ async def delete_ledger(trip: OwnedTrip, entry_id: str, session: DbSession) -> N
         parsed = uuid.UUID(entry_id)
     except ValueError as exc:
         raise NotFoundError(f"Ledger entry not found: {entry_id}") from exc
-    await delete_ledger_entry(session, trip.id, parsed)
+    deleted = await delete_ledger_entry(session, trip.id, parsed)
+    if not deleted:
+        raise NotFoundError(f"Ledger entry not found: {entry_id}")
     await record_event(
         "expenses_updated",
         user_id=trip.user_id,

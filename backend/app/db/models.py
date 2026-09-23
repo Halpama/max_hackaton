@@ -70,6 +70,7 @@ class Trip(Base, TimestampMixin):
 
     # pending | running | ready | failed
     status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    generation_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, index=True)
     stage: Mapped[str | None] = mapped_column(String(32))
     error: Mapped[str | None] = mapped_column(Text)
     route_plan: Mapped[dict | None] = mapped_column(JsonColumn)

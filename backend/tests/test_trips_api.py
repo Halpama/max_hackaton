@@ -174,11 +174,13 @@ async def test_packing_and_ledger(client: AsyncClient):
     entry_id = entry.json()["id"]
     assert (await client.delete(f"/api/v1/trips/{trip_id}/ledger/{entry_id}")).status_code == 204
     assert (await client.get(f"/api/v1/trips/{trip_id}/ledger")).json() == []
+    missing_entry = await client.delete(f"/api/v1/trips/{trip_id}/ledger/{entry_id}")
+    assert missing_entry.status_code == 404
 
 
 async def test_bot_webhook_is_disabled(client: AsyncClient):
     response = await client.post("/api/v1/bot/webhook", json={"update_type": "message_created"})
-    assert response.status_code == 501
+    assert response.status_code == 503
     assert response.json()["code"] == "bot_disabled"
 
 

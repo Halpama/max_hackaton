@@ -24,6 +24,8 @@ def dev_auth():
     settings.kudago_enabled = False
     settings.weather_enabled = False
     settings.ors_api_key = ""
+    # A developer .env may enable the bot; webhook tests must stay deterministic.
+    settings.max_bot_enabled = False
     yield
 
 

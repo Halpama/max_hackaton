@@ -4,8 +4,9 @@ Stage keys match LOADING_STEPS in the frontend, so the loader screen advances in
 step with the real work instead of a timer.
 """
 import uuid
+import asyncio
 from time import perf_counter
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import orjson
 from sqlalchemy import select
@@ -88,9 +89,13 @@ async def _set_status(
     stage: str | None = None,
     error: str | None = None,
     route_plan: dict | None = None,
+    generation_id: uuid.UUID | None = None,
 ) -> None:
     async with get_session_factory()() as session:
-        trip = await session.scalar(select(Trip).where(Trip.id == trip_id))
+        query = select(Trip).where(Trip.id == trip_id)
+        if generation_id is not None:
+            query = query.where(Trip.generation_id == generation_id)
+        trip = await session.scalar(query)
         if trip is None:
             return
         if status is not None:
@@ -200,7 +205,7 @@ async def build_route(
             stage_context["started"] = str(perf_counter())
         if emit:
             await _emit(trip_id, key, "active")
-        await _set_status(trip_id, stage=key)
+        await _set_status(trip_id, stage=key, generation_id=generation_id)
         await record_event(
             "stage_started",
             user_id=user_id,
@@ -428,7 +433,7 @@ async def build_route(
         date_label=formatting.date_range_label(start_at.date(), end_at.date()),
         travelers_label=formatting.travelers_label(draft.adults, draft.children),
         budget_label=budget_service.budget_label(draft.budget),
-        city_guide=await city_guide.build_city_guide(
+        city_guide=await _build_city_guide_safe(
             city,
             start_at.date(),
             lat=lat,
@@ -462,9 +467,25 @@ async def build_route(
     return route
 
 
-async def generate_trip(trip_id: uuid.UUID, draft: TripDraft) -> None:
+async def _build_city_guide_safe(city: str, trip_date: date, **kwargs) -> dict | None:
+    try:
+        return await asyncio.wait_for(
+            city_guide.build_city_guide(city, trip_date, **kwargs),
+            timeout=4.0,
+        )
+    except Exception as exc:  # noqa: BLE001 - guide is optional enrichment
+        logger.warning("City guide skipped for %s: %s", city, exc)
+        return None
+
+
+async def generate_trip(
+    trip_id: uuid.UUID,
+    draft: TripDraft,
+    *,
+    generation_id: uuid.UUID | None = None,
+) -> None:
     """Background entrypoint: generate, persist, and announce the result."""
-    generation_id = uuid.uuid4()
+    generation_id = generation_id or uuid.uuid4()
     started = perf_counter()
     stage_context: dict[str, str | None] = {"key": None, "started": None}
     async with get_session_factory()() as session:
@@ -492,7 +513,7 @@ async def generate_trip(trip_id: uuid.UUID, draft: TripDraft) -> None:
         status="started",
         payload={"parameters": safe_parameters},
     )
-    await _set_status(trip_id, status="running")
+    await _set_status(trip_id, status="running", generation_id=generation_id)
 
     try:
         cache_key = plan_cache_key(draft)
@@ -511,12 +532,20 @@ async def generate_trip(trip_id: uuid.UUID, draft: TripDraft) -> None:
         route = RoutePlan.model_validate(payload)
 
         async with get_session_factory()() as session:
-            trip = await session.scalar(select(Trip).where(Trip.id == trip_id))
-            if trip is not None:
-                trip.status = "ready"
-                trip.stage = "schedule"
-                trip.error = None
-                trip.route_plan = payload
+            trip = await session.scalar(
+                select(Trip).where(
+                    Trip.id == trip_id,
+                    Trip.generation_id == generation_id,
+                    Trip.status == "running",
+                )
+            )
+            if trip is None:
+                logger.warning("Ignoring stale generation %s for trip %s", generation_id, trip_id)
+                return
+            trip.status = "ready"
+            trip.stage = "schedule"
+            trip.error = None
+            trip.route_plan = payload
             await upsert_places(session, list(route.places.values()), route.city)
             await session.commit()
 
@@ -584,7 +613,12 @@ async def generate_trip(trip_id: uuid.UUID, draft: TripDraft) -> None:
             duration_ms=round((perf_counter() - started) * 1000, 2),
             error=exc,
         )
-        await _set_status(trip_id, status="failed", error=str(exc))
+        await _set_status(
+            trip_id,
+            status="failed",
+            error=str(exc),
+            generation_id=generation_id,
+        )
         await progress.publish(
             trip_id,
             ErrorEvent(trip_id=str(trip_id), message=message).model_dump(by_alias=True),
