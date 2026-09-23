@@ -14,6 +14,9 @@ def rate_limit_on(monkeypatch):
 
 async def test_trip_post_limited(client: AsyncClient, rate_limit_on, monkeypatch):
     monkeypatch.setattr(settings, "rate_limit_trip_max", 2)
+    # This test only counts requests; generation would hit the network and
+    # race the database teardown.
+    monkeypatch.setattr("app.api.v1.trips._spawn", lambda *args, **kwargs: True)
 
     for _ in range(2):
         response = await client.post("/api/v1/trips", json=SAMPLE_DRAFT)

@@ -1,3 +1,5 @@
+import asyncio
+
 import fakeredis.aioredis
 import pytest
 import pytest_asyncio
@@ -56,6 +58,19 @@ async def database():
     )
 
     yield engine
+
+    # A test may leave a trip-generation task mid-flight (e.g. rate-limit POSTs
+    # that only check the 429). Cancel it before disposing the StaticPool —
+    # otherwise the task races dispose and SQLAlchemy raises KeyError.
+    from app.api.v1 import trips as trips_module
+
+    pending = [task for task in trips_module._background_tasks if not task.done()]
+    for task in pending:
+        task.cancel()
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+    trips_module._background_tasks.clear()
+    trips_module._trip_tasks.clear()
 
     await engine.dispose()
     session_module._engine = None
