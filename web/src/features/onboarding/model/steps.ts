@@ -17,8 +17,6 @@ export type OnboardingStep = {
     /** Prefer bubble above or below the hole when a target is set. */
     bubble?: "auto" | "above" | "below" | "center";
     cta?: string;
-    /** After this step's primary CTA, navigate here (tour stays active). */
-    navigateTo?: string;
     /**
      * Path prefixes where this step is valid.
      * If set and the user is elsewhere, Tosha waits with a bridge message.
@@ -148,14 +146,16 @@ export const CREATE_TOUR_STEPS: OnboardingStep[] = [
     {
         id: "create-next",
         pose: "success",
-        title: "Дальше — интересы",
-        text: "На следующем экране выберешь интересы и темп. Нажми кнопку — перейдём вместе.",
+        title: "Теперь заполни форму",
+        text: "Город, даты, бюджет и состав — потом «Далее». На экране интересов я ещё раз коротко подскажу.",
         target: "create-next",
         bubble: "above",
-        cta: "К интересам",
+        cta: "Понял",
         paths: ["/trips/new"],
-        navigateTo: "/preferences",
     },
+];
+
+export const PREFS_TOUR_STEPS: OnboardingStep[] = [
     {
         id: "pref-bridge",
         pose: "explaining",
@@ -261,6 +261,7 @@ export const ROUTE_TOUR_STEPS: OnboardingStep[] = [
 export const TOUR_STEPS: Record<TourId, OnboardingStep[]> = {
     home: HOME_TOUR_STEPS,
     create: CREATE_TOUR_STEPS,
+    prefs: PREFS_TOUR_STEPS,
     route: ROUTE_TOUR_STEPS,
 };
 
@@ -277,6 +278,7 @@ export function stepMatchesPath(step: OnboardingStep, pathname: string) {
 
 export function tourHomePath(tour: TourId): string {
     if (tour === "create") return "/trips/new";
+    if (tour === "prefs") return "/preferences";
     if (tour === "route") return "/route";
     return "/";
 }

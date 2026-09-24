@@ -100,7 +100,7 @@ function inferTourFromPath(
         return null;
     }
     if (pathname === ROUTES.preferences) {
-        if (!readTourDone("create")) return "create";
+        if (!readTourDone("prefs")) return "prefs";
         return null;
     }
     if (pathname === ROUTES.route && routeReady) {
@@ -176,10 +176,16 @@ export function ToshaOnboarding() {
                 navigate(`${ROUTES.home}?onboarding=home`, { replace: true });
             } else if (
                 query.tour === "create" &&
-                location.pathname !== ROUTES.newTrip &&
-                location.pathname !== ROUTES.preferences
+                location.pathname !== ROUTES.newTrip
             ) {
                 navigate(`${ROUTES.newTrip}?onboarding=create`, {
+                    replace: true,
+                });
+            } else if (
+                query.tour === "prefs" &&
+                location.pathname !== ROUTES.preferences
+            ) {
+                navigate(`${ROUTES.preferences}?onboarding=prefs`, {
                     replace: true,
                 });
             } else if (
@@ -450,14 +456,11 @@ export function ToshaOnboarding() {
                                     type="button"
                                     className={styles.next}
                                     onClick={() => {
-                                        const go = step.navigateTo;
                                         if (isLast) {
                                             finish(false);
-                                            if (go) navigate(go);
                                             return;
                                         }
                                         setStepIndex((value) => value + 1);
-                                        if (go) navigate(go);
                                     }}
                                 >
                                     {display.cta ??

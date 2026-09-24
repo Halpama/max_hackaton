@@ -1,6 +1,6 @@
 /** Persist Tosha tour completion per stage. */
 
-export type TourId = "home" | "create" | "route";
+export type TourId = "home" | "create" | "prefs" | "route";
 
 export type OnboardingRecord = {
     done: boolean;
@@ -11,6 +11,7 @@ export type OnboardingRecord = {
 const TOUR_KEYS: Record<TourId, string> = {
     home: "tp-tosha-onboarding-home-v1",
     create: "tp-tosha-onboarding-create-v1",
+    prefs: "tp-tosha-onboarding-prefs-v1",
     route: "tp-tosha-onboarding-route-v1",
 };
 
@@ -103,7 +104,7 @@ export function resolveOnboardingQuery(search: string): OnboardingQuery {
     if (raw === "0" || raw === "false" || raw === "off") {
         return { mode: "skip" };
     }
-    if (raw === "create" || raw === "route" || raw === "home") {
+    if (raw === "create" || raw === "prefs" || raw === "route" || raw === "home") {
         return { mode: "force", tour: raw };
     }
     if (raw === "1" || raw === "true" || raw === "replay" || raw === "force") {
