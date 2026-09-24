@@ -360,13 +360,11 @@ export function BottomNav() {
                                     item.emphasis ? "Новая поездка" : item.label
                                 }
                                 data-tour={
-                                    item.id === "new"
-                                        ? "nav-new"
-                                        : item.id === "favorites"
-                                          ? "nav-favorites"
-                                          : item.id === "trips"
-                                            ? "nav-trips"
-                                            : undefined
+                                    item.id === "favorites"
+                                        ? "nav-favorites"
+                                        : item.id === "trips"
+                                          ? "nav-trips"
+                                          : undefined
                                 }
                                 className={
                                     item.emphasis
@@ -381,7 +379,12 @@ export function BottomNav() {
                                 onClick={item.onSelect}
                             >
                                 {item.emphasis ? (
-                                    <span className={styles.fab} aria-hidden>
+                                    <span
+                                        className={styles.fab}
+                                        data-tour="nav-new"
+                                        data-tour-shape="circle"
+                                        aria-hidden
+                                    >
                                         {item.icon}
                                     </span>
                                 ) : (

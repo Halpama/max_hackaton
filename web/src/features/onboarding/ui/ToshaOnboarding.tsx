@@ -15,16 +15,19 @@ import {
     resetOnboarding,
     resolveOnboardingQuery,
 } from "../lib/storage";
-import {
-    ONBOARDING_STEPS,
-    TOSHA_POSES,
-} from "../model/steps";
+import { ONBOARDING_STEPS, TOSHA_POSES } from "../model/steps";
 import styles from "./ToshaOnboarding.module.css";
 
-type Hole = { top: number; left: number; width: number; height: number };
+type Hole = {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+    radius: number;
+};
 
-const PAD = 10;
-const RADIUS = 18;
+const RECT_PAD = 8;
+const CIRCLE_PAD = 6;
 
 function measureTarget(tourId: string | undefined): Hole | null {
     if (!tourId || typeof document === "undefined") return null;
@@ -32,13 +35,35 @@ function measureTarget(tourId: string | undefined): Hole | null {
         `[data-tour="${tourId}"]`,
     ) as HTMLElement | null;
     if (!node) return null;
+
     const rect = node.getBoundingClientRect();
     if (rect.width < 4 || rect.height < 4) return null;
+
+    const shapeAttr = node.getAttribute("data-tour-shape");
+    const nearlySquare = Math.abs(rect.width - rect.height) < 10;
+    const isCircle =
+        shapeAttr === "circle" ||
+        (shapeAttr !== "rect" && nearlySquare && rect.width <= 72);
+
+    if (isCircle) {
+        const size = Math.max(rect.width, rect.height) + CIRCLE_PAD * 2;
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        return {
+            top: cy - size / 2,
+            left: cx - size / 2,
+            width: size,
+            height: size,
+            radius: size / 2,
+        };
+    }
+
     return {
-        top: Math.max(8, rect.top - PAD),
-        left: Math.max(8, rect.left - PAD),
-        width: Math.min(window.innerWidth - 16, rect.width + PAD * 2),
-        height: Math.min(window.innerHeight - 16, rect.height + PAD * 2),
+        top: Math.max(8, rect.top - RECT_PAD),
+        left: Math.max(8, rect.left - RECT_PAD),
+        width: Math.min(window.innerWidth - 16, rect.width + RECT_PAD * 2),
+        height: Math.min(window.innerHeight - 16, rect.height + RECT_PAD * 2),
+        radius: 14,
     };
 }
 
@@ -131,10 +156,12 @@ export function ToshaOnboarding() {
         const refresh = () => setHole(measureTarget(step.target));
         refresh();
         const raf = requestAnimationFrame(refresh);
+        const timer = window.setTimeout(refresh, 80);
         window.addEventListener("resize", refresh);
         window.addEventListener("scroll", refresh, true);
         return () => {
             cancelAnimationFrame(raf);
+            window.clearTimeout(timer);
             window.removeEventListener("resize", refresh);
             window.removeEventListener("scroll", refresh, true);
         };
@@ -159,13 +186,13 @@ export function ToshaOnboarding() {
                   : "below";
         if (prefer === "above") {
             return {
-                bottom: `${window.innerHeight - hole.top + 16}px`,
+                bottom: `${window.innerHeight - hole.top + 18}px`,
                 left: "16px",
                 right: "16px",
             } as const;
         }
         return {
-            top: `${hole.top + hole.height + 16}px`,
+            top: `${hole.top + hole.height + 18}px`,
             left: "16px",
             right: "16px",
         } as const;
@@ -199,7 +226,7 @@ export function ToshaOnboarding() {
                             left: hole.left,
                             width: hole.width,
                             height: hole.height,
-                            borderRadius: RADIUS,
+                            borderRadius: hole.radius,
                         }}
                     />
                 ) : null}
@@ -213,19 +240,11 @@ export function ToshaOnboarding() {
                         left: hole.left,
                         width: hole.width,
                         height: hole.height,
-                        borderRadius: RADIUS,
+                        borderRadius: hole.radius,
                     }}
                     aria-hidden
                 />
             ) : null}
-
-            <button
-                type="button"
-                className={styles.skip}
-                onClick={() => finish(true)}
-            >
-                Пропустить
-            </button>
 
             <div
                 className={
@@ -233,7 +252,7 @@ export function ToshaOnboarding() {
                 }
                 style={bubbleStyle}
             >
-                <div className={styles.mascotWrap} data-pose={step.pose}>
+                <div className={styles.mascotWrap}>
                     <img
                         key={step.pose}
                         className={`${styles.mascot} ${poseReady ? styles.mascotIn : ""}`}
@@ -245,7 +264,7 @@ export function ToshaOnboarding() {
                 </div>
 
                 <div className={styles.bubble}>
-                    <p className={styles.kicker}>Тоша · гид</p>
+                    <p className={styles.kicker}>Тоша</p>
                     <h2 id={titleId} className={styles.title}>
                         {step.title}
                     </h2>
@@ -269,19 +288,28 @@ export function ToshaOnboarding() {
                                 />
                             ))}
                         </div>
-                        <button
-                            type="button"
-                            className={styles.next}
-                            onClick={() => {
-                                if (isLast) {
-                                    finish(false);
-                                    return;
-                                }
-                                setStepIndex((value) => value + 1);
-                            }}
-                        >
-                            {step.cta ?? (isLast ? "Начать" : "Дальше")}
-                        </button>
+                        <div className={styles.actions}>
+                            <button
+                                type="button"
+                                className={styles.skipText}
+                                onClick={() => finish(true)}
+                            >
+                                Пропустить
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.next}
+                                onClick={() => {
+                                    if (isLast) {
+                                        finish(false);
+                                        return;
+                                    }
+                                    setStepIndex((value) => value + 1);
+                                }}
+                            >
+                                {step.cta ?? (isLast ? "Начать" : "Дальше")}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

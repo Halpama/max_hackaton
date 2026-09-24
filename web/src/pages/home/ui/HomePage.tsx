@@ -133,6 +133,7 @@ function BrandTitleRow({
                 className={styles.helpBtn}
                 aria-label="Как это работает"
                 data-tour="home-help"
+                data-tour-shape="circle"
                 onClick={onHelp}
             >
                 <InfoIcon />
