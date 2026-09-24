@@ -75,42 +75,44 @@ export function NewTripPage() {
     return (
         <Screen
             footer={
-                <Button
-                    stretched
-                    size="large"
-                    disabled={!canContinue}
-                    onClick={() => {
-                        if (!editingTripId) {
-                            navigate(ROUTES.preferences);
-                            return;
-                        }
-                        setSubmitting(true);
-                        void updateTrip(editingTripId, {
-                            startDate: draft.startDate,
-                            startTime: draft.startTime,
-                            endDate: draft.endDate,
-                            endTime: draft.endTime,
-                            budget: draft.budget,
-                            adults: draft.adults,
-                            children: draft.children,
-                            interests: draft.interests,
-                            pace: draft.pace,
-                            findHousing: draft.findHousing,
-                        })
-                            .then(() =>
-                                navigate(
-                                    `${ROUTES.loading}?tripId=${editingTripId}`,
-                                ),
-                            )
-                            .catch(() => setSubmitting(false));
-                    }}
-                >
-                    {isEditing
-                        ? submitting
-                            ? "Сохраняем…"
-                            : "Перестроить маршрут"
-                        : "Далее"}
-                </Button>
+                <div data-tour="create-next">
+                    <Button
+                        stretched
+                        size="large"
+                        disabled={!canContinue}
+                        onClick={() => {
+                            if (!editingTripId) {
+                                navigate(ROUTES.preferences);
+                                return;
+                            }
+                            setSubmitting(true);
+                            void updateTrip(editingTripId, {
+                                startDate: draft.startDate,
+                                startTime: draft.startTime,
+                                endDate: draft.endDate,
+                                endTime: draft.endTime,
+                                budget: draft.budget,
+                                adults: draft.adults,
+                                children: draft.children,
+                                interests: draft.interests,
+                                pace: draft.pace,
+                                findHousing: draft.findHousing,
+                            })
+                                .then(() =>
+                                    navigate(
+                                        `${ROUTES.loading}?tripId=${editingTripId}`,
+                                    ),
+                                )
+                                .catch(() => setSubmitting(false));
+                        }}
+                    >
+                        {isEditing
+                            ? submitting
+                                ? "Сохраняем…"
+                                : "Перестроить маршрут"
+                            : "Далее"}
+                    </Button>
+                </div>
             }
         >
             <h1 className={tripStyles.title}>
@@ -118,94 +120,113 @@ export function NewTripPage() {
             </h1>
 
             {!isEditing ? (
-                <Section
-                    label="Куда едем?"
-                    hint="Выберите город из списка — так маршрут строится точнее."
-                >
-                    <CityField
-                        value={draft.destination}
-                        onChange={(destination) =>
-                            updateDraft({ destination })
-                        }
-                        placeholder="Начните вводить город"
-                    />
-                </Section>
+                <div data-tour="create-city">
+                    <Section
+                        label="Куда едем?"
+                        hint="Выберите город из списка — так маршрут строится точнее."
+                    >
+                        <CityField
+                            value={draft.destination}
+                            onChange={(destination) =>
+                                updateDraft({ destination })
+                            }
+                            placeholder="Начните вводить город"
+                        />
+                    </Section>
+                </div>
             ) : null}
 
-            <Section
-                label="Даты"
-                hint={
-                    isEditing
-                        ? "Город остаётся прежним — меняются даты, бюджет, состав, интересы и темп."
-                        : `Приезд — не раньше текущей даты. Выезд по умолчанию через ${DEFAULT_TRIP_DURATION_DAYS} дня.`
-                }
-            >
-                <div className={tripStyles.datesStack}>
-                    <div className={tripStyles.dateTimeRow}>
-                        <DateField
-                            label="Приезд"
-                            value={draft.startDate}
-                            min={startMin}
-                            onChange={(startDate) => updateDraft({ startDate })}
-                        />
-                        <TimeField
-                            label="Время"
-                            value={draft.startTime}
-                            onChange={(startTime) => updateDraft({ startTime })}
-                        />
+            <div data-tour="create-dates">
+                <Section
+                    label="Даты"
+                    hint={
+                        isEditing
+                            ? "Город остаётся прежним — меняются даты, бюджет, состав, интересы и темп."
+                            : `Приезд — не раньше текущей даты. Выезд по умолчанию через ${DEFAULT_TRIP_DURATION_DAYS} дня.`
+                    }
+                >
+                    <div className={tripStyles.datesStack}>
+                        <div className={tripStyles.dateTimeRow}>
+                            <DateField
+                                label="Приезд"
+                                value={draft.startDate}
+                                min={startMin}
+                                onChange={(startDate) =>
+                                    updateDraft({ startDate })
+                                }
+                            />
+                            <TimeField
+                                label="Время"
+                                value={draft.startTime}
+                                onChange={(startTime) =>
+                                    updateDraft({ startTime })
+                                }
+                            />
+                        </div>
+                        <div className={tripStyles.dateTimeRow}>
+                            <DateField
+                                label="Выезд"
+                                value={draft.endDate}
+                                min={endMin}
+                                onChange={(endDate) => updateDraft({ endDate })}
+                            />
+                            <TimeField
+                                label="Время"
+                                value={draft.endTime}
+                                onChange={(endTime) =>
+                                    updateDraft({ endTime })
+                                }
+                            />
+                        </div>
                     </div>
-                    <div className={tripStyles.dateTimeRow}>
-                        <DateField
-                            label="Выезд"
-                            value={draft.endDate}
-                            min={endMin}
-                            onChange={(endDate) => updateDraft({ endDate })}
-                        />
-                        <TimeField
-                            label="Время"
-                            value={draft.endTime}
-                            onChange={(endTime) => updateDraft({ endTime })}
-                        />
-                    </div>
-                </div>
-            </Section>
-            <Section
-                label="Бюджет"
-                hint={`Сколько планируете потратить. 0 ₽ — только бесплатные места. До ${formatBudget(MAX_TRIP_BUDGET)} ₽.`}
-            >
-                <TextField
-                    icon={<RubleIcon />}
-                    inputMode="numeric"
-                    value={formatBudget(draft.budget)}
-                    onChange={(event) => {
-                        const digits = event.target.value.replace(/\D/g, "");
-                        updateDraft({ budget: digits ? Number(digits) : 0 });
-                    }}
-                />
-            </Section>
+                </Section>
+            </div>
+            <div data-tour="create-budget">
+                <Section
+                    label="Бюджет"
+                    hint={`Сколько планируете потратить. 0 ₽ — только бесплатные места. До ${formatBudget(MAX_TRIP_BUDGET)} ₽.`}
+                >
+                    <TextField
+                        icon={<RubleIcon />}
+                        inputMode="numeric"
+                        value={formatBudget(draft.budget)}
+                        onChange={(event) => {
+                            const digits = event.target.value.replace(
+                                /\D/g,
+                                "",
+                            );
+                            updateDraft({
+                                budget: digits ? Number(digits) : 0,
+                            });
+                        }}
+                    />
+                </Section>
+            </div>
 
-            <Section
-                label="Путешественники"
-                hint="Укажите взрослых и детей. Всего может быть не больше 10 человек."
-            >
-                <div className={tripStyles.datesStack}>
-                    <Stepper
-                        icon={<PersonIcon />}
-                        label="Взрослые"
-                        value={draft.adults}
-                        max={10 - draft.children}
-                        onChange={setAdults}
-                    />
-                    <Stepper
-                        icon={<PersonIcon />}
-                        label="Дети"
-                        value={draft.children}
-                        min={0}
-                        max={10 - draft.adults}
-                        onChange={setChildren}
-                    />
-                </div>
-            </Section>
+            <div data-tour="create-party">
+                <Section
+                    label="Путешественники"
+                    hint="Укажите взрослых и детей. Всего может быть не больше 10 человек."
+                >
+                    <div className={tripStyles.datesStack}>
+                        <Stepper
+                            icon={<PersonIcon />}
+                            label="Взрослые"
+                            value={draft.adults}
+                            max={10 - draft.children}
+                            onChange={setAdults}
+                        />
+                        <Stepper
+                            icon={<PersonIcon />}
+                            label="Дети"
+                            value={draft.children}
+                            min={0}
+                            max={10 - draft.adults}
+                            onChange={setChildren}
+                        />
+                    </div>
+                </Section>
+            </div>
 
             {isEditing ? (
                 <>

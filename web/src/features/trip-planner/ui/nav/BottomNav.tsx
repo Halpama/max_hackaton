@@ -359,6 +359,17 @@ export function BottomNav() {
                                 aria-label={
                                     item.emphasis ? "Новая поездка" : item.label
                                 }
+                                data-tour={
+                                    item.id === "favorites"
+                                        ? "nav-favorites"
+                                        : item.id === "trips"
+                                          ? "nav-trips"
+                                          : item.id === "packing"
+                                            ? "nav-packing"
+                                            : item.id === "budget"
+                                              ? "nav-budget"
+                                              : undefined
+                                }
                                 className={
                                     item.emphasis
                                         ? styles.emphasis
@@ -372,7 +383,12 @@ export function BottomNav() {
                                 onClick={item.onSelect}
                             >
                                 {item.emphasis ? (
-                                    <span className={styles.fab} aria-hidden>
+                                    <span
+                                        className={styles.fab}
+                                        data-tour="nav-new"
+                                        data-tour-shape="circle"
+                                        aria-hidden
+                                    >
                                         {item.icon}
                                     </span>
                                 ) : (
