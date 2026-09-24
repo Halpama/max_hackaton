@@ -359,6 +359,15 @@ export function BottomNav() {
                                 aria-label={
                                     item.emphasis ? "Новая поездка" : item.label
                                 }
+                                data-tour={
+                                    item.id === "new"
+                                        ? "nav-new"
+                                        : item.id === "favorites"
+                                          ? "nav-favorites"
+                                          : item.id === "trips"
+                                            ? "nav-trips"
+                                            : undefined
+                                }
                                 className={
                                     item.emphasis
                                         ? styles.emphasis

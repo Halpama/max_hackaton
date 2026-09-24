@@ -3,6 +3,7 @@ import { Outlet, useLocation, useMatches, useNavigationType, useResolvedPath } f
 import { ROUTES } from '@/shared/config'
 import { useMaxBackButton } from '@/shared/hooks'
 import { BottomNav, shouldShowBottomNav } from '@/features/trip-planner'
+import { ToshaOnboarding } from '@/features/onboarding'
 import styles from './AppShell.module.css'
 
 export function AppShell() {
@@ -29,6 +30,7 @@ export function AppShell() {
         <Outlet />
       </div>
       {showNav ? <BottomNav /> : null}
+      <ToshaOnboarding />
     </div>
   )
 }

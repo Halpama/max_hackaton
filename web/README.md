@@ -55,6 +55,10 @@ src/
 | `place/`   | PlaceDetails                                                         |
 | `nav/`     | BottomNav + helpers deep-link                                        |
 
+Отдельно: `features/onboarding` — первый заход с маскотом Тошей (`ToshaOnboarding`).
+Повтор в dev: `?onboarding=1`, чип «Тоша · demo», или «Пройти с Тошей» в справке.
+Выключить: `?onboarding=0`.
+
 Импортируйте публичное API так:
 
 ```ts

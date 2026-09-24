@@ -25,6 +25,7 @@ import {
     type Place,
     type TripSummary,
 } from "@/features/trip-planner";
+import { requestToshaOnboardingReplay } from "@/features/onboarding";
 import {
     knownCityImage,
     resolveCityImage,
@@ -124,13 +125,14 @@ function BrandTitleRow({
     onHelp: () => void;
 }) {
     return (
-        <div className={styles.titleRow}>
+        <div className={styles.titleRow} data-tour="home-trips">
             <img src="/logo.svg" alt="2РИСТ" className={styles.brandLogo} />
             <h1 className={tripStyles.title}>{title}</h1>
             <button
                 type="button"
                 className={styles.helpBtn}
                 aria-label="Как это работает"
+                data-tour="home-help"
                 onClick={onHelp}
             >
                 <InfoIcon />
@@ -503,6 +505,16 @@ function HowItWorksModal({ onClose }: { onClose: () => void }) {
                     onClick={onClose}
                 >
                     Понятно
+                </button>
+                <button
+                    type="button"
+                    className={styles.helpReplay}
+                    onClick={() => {
+                        onClose();
+                        requestToshaOnboardingReplay();
+                    }}
+                >
+                    Пройти с Тошей
                 </button>
             </div>
         </div>,
