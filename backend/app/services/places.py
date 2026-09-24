@@ -1,4 +1,5 @@
 """Turn OpenTripMap and KudaGo records into the Place shape the frontend expects."""
+import asyncio
 import html
 import re
 from dataclasses import dataclass, field
@@ -672,8 +673,7 @@ async def _search_radius(
     # as soon as the itinerary has enough places.
     per_interest = max(24, (needed * 4) // len(active) + 10)
 
-    ranked: dict[str, list[dict]] = {}
-    for interest in active:
+    async def fetch_interest(interest: str) -> tuple[str, list[dict]]:
         kinds, fallback = INTEREST_KINDS[interest]
         try:
             found = await _radius_with_fallback(
@@ -686,7 +686,7 @@ async def _search_radius(
             )
         except Exception as exc:  # noqa: BLE001 - one bad interest must not kill the trip
             logger.warning("Radius search failed for %s: %s", interest, exc)
-            continue
+            return interest, []
 
         usable = [item for item in found if item.get("xid") and _clean_text(item.get("name", ""))]
         usable.sort(key=lambda item: parse_rate(item.get("rate")), reverse=True)
@@ -695,7 +695,11 @@ async def _search_radius(
         by_name: dict[str, dict] = {}
         for item in usable:
             by_name.setdefault(normalize_title(_clean_text(item["name"])), item)
-        ranked[interest] = list(by_name.values())[:per_interest]
+        return interest, list(by_name.values())[:per_interest]
+
+    # These searches are independent. Keep the original interest order when
+    # merging so ranking and selection remain deterministic.
+    ranked = dict(await asyncio.gather(*(fetch_interest(interest) for interest in active)))
 
     # Round-robin the per-interest lists into one ordered xid list.
     xid_to_interests: dict[str, set[str]] = {}
