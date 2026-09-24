@@ -672,6 +672,23 @@
     opacity: 0.92;
 }
 
+.helpReplay {
+    width: 100%;
+    height: 44px;
+    margin-top: 8px;
+    border: 1px solid rgba(0, 110, 255, 0.22);
+    border-radius: 14px;
+    background: #f0f7ff;
+    color: #0057c7;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.helpReplay:active {
+    opacity: 0.9;
+}
+
 .confirmRoot {
     position: fixed;
     inset: 0;
