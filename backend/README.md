@@ -127,7 +127,25 @@ krasnoyarsk, vbg. Там, где он есть, места берутся отт
 
 Классификатор indoor/outdoor подключён в безопасном режиме `shadow`: он
 сравнивается с правилами и не меняет маршрут. Для эксперимента включается
-через `ENVIRONMENT_MODEL_MODE=active`; при низкой уверенности остаются правила.
+через `ENVIRONMENT_MODEL_MODE=active`; при низкой уверенности остаются правила
+(пороги — `ENVIRONMENT_MODEL_THRESHOLD` и `ENVIRONMENT_MODEL_FALLBACK_THRESHOLD`).
+
+Обучение модели. Поддерживаются JSONL (одна строка = одно место с полями
+`title`, `description`, `opening_hours`, `kinds`, `category_kind`, `city`,
+`manual_environment`) и CSV-экспорт размеченных данных, включая `;`-разделённый
+`ml_data/environment_labels_filled.csv`:
+
+```bash
+cd backend
+python scripts/train_environment_model.py --input ml_data/environment_labels_filled.csv
+# разбивка по городам — default; когда городов много: --city-split stratified
+```
+
+Скрипт печатает метрики правил и модели, скан порогов и сохраняет единый
+sklearn-пайплайн в `ml_data/environment_model.joblib`. Свои размеченные данные
+подключаются флагами `--input/--model`. Класс `ItemSelector` живёт в
+`app/services/environment.py`, чтобы artifact загружался в рантайме без
+зависимости от скрипта обучения.
 
 ## Кеш в Redis
 

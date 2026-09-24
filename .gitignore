@@ -1,0 +1,12 @@
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Model artifacts
+*.joblib
+
+# Environment variables
+.env
+.env.local
+.env.*.local
