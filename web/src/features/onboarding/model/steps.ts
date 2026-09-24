@@ -12,8 +12,8 @@ export type OnboardingStep = {
     pose: ToshaPose;
     title: string;
     text: string;
-    /** `data-tour` value to spotlight; omit for a full-screen beat. */
-    target?: string;
+    /** `data-tour` value(s) to spotlight; omit for a full-screen beat. */
+    target?: string | string[];
     /** Prefer bubble above or below the hole when a target is set. */
     bubble?: "auto" | "above" | "below" | "center";
     cta?: string;
@@ -233,7 +233,7 @@ export const ROUTE_TOUR_STEPS: OnboardingStep[] = [
         title: "Карта дня",
         text: "Точки на карте — места дня. Ниже — карточки с временем и дорогой между ними.",
         target: "route-map",
-        bubble: "below",
+        bubble: "above",
         cta: "Дальше",
         paths: ["/route"],
     },
@@ -242,7 +242,7 @@ export const ROUTE_TOUR_STEPS: OnboardingStep[] = [
         pose: "pointing",
         title: "Сборы и бюджет",
         text: "Внизу: «Сборы» — чеклист вещей, «Бюджет» — учёт трат. «Поездки» — назад к списку.",
-        target: "nav-packing",
+        target: ["nav-packing", "nav-budget", "nav-trips"],
         bubble: "above",
         cta: "Дальше",
         paths: ["/route"],

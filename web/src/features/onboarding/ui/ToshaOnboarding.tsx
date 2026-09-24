@@ -40,43 +40,157 @@ type Hole = {
 
 const RECT_PAD = 8;
 const CIRCLE_PAD = 6;
+const PANEL_FALLBACK_H = 300;
+const PANEL_GAP = 18;
+const VIEW_PAD = 12;
 
-function measureTarget(tourId: string | undefined): Hole | null {
-    if (!tourId || typeof document === "undefined") return null;
-    const node = document.querySelector(
-        `[data-tour="${tourId}"]`,
-    ) as HTMLElement | null;
-    if (!node) return null;
+function targetIds(target: string | string[] | undefined): string[] {
+    if (!target) return [];
+    return Array.isArray(target) ? target : [target];
+}
 
-    const rect = node.getBoundingClientRect();
-    if (rect.width < 4 || rect.height < 4) return null;
+function queryTourNodes(ids: string[]): HTMLElement[] {
+    if (typeof document === "undefined") return [];
+    const nodes: HTMLElement[] = [];
+    for (const id of ids) {
+        const node = document.querySelector(
+            `[data-tour="${id}"]`,
+        ) as HTMLElement | null;
+        if (node) nodes.push(node);
+    }
+    return nodes;
+}
 
-    const shapeAttr = node.getAttribute("data-tour-shape");
-    const nearlySquare = Math.abs(rect.width - rect.height) < 10;
-    const isCircle =
-        shapeAttr === "circle" ||
-        (shapeAttr !== "rect" && nearlySquare && rect.width <= 72);
+function findScrollParent(node: HTMLElement): HTMLElement | null {
+    let current: HTMLElement | null = node.parentElement;
+    while (current && current !== document.body) {
+        const style = getComputedStyle(current);
+        const overflowY = style.overflowY;
+        if (
+            (overflowY === "auto" ||
+                overflowY === "scroll" ||
+                overflowY === "overlay") &&
+            current.scrollHeight > current.clientHeight + 4
+        ) {
+            return current;
+        }
+        current = current.parentElement;
+    }
+    return document.scrollingElement instanceof HTMLElement
+        ? document.scrollingElement
+        : null;
+}
 
-    if (isCircle) {
-        const size = Math.max(rect.width, rect.height) + CIRCLE_PAD * 2;
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
+function measureHoleFromNodes(nodes: HTMLElement[]): Hole | null {
+    if (nodes.length === 0) return null;
+
+    if (nodes.length === 1) {
+        const node = nodes[0];
+        const rect = node.getBoundingClientRect();
+        if (rect.width < 4 || rect.height < 4) return null;
+
+        const shapeAttr = node.getAttribute("data-tour-shape");
+        const nearlySquare = Math.abs(rect.width - rect.height) < 10;
+        const isCircle =
+            shapeAttr === "circle" ||
+            (shapeAttr !== "rect" && nearlySquare && rect.width <= 72);
+
+        if (isCircle) {
+            const size = Math.max(rect.width, rect.height) + CIRCLE_PAD * 2;
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            return {
+                top: cy - size / 2,
+                left: cx - size / 2,
+                width: size,
+                height: size,
+                radius: size / 2,
+            };
+        }
+
         return {
-            top: cy - size / 2,
-            left: cx - size / 2,
-            width: size,
-            height: size,
-            radius: size / 2,
+            top: Math.max(8, rect.top - RECT_PAD),
+            left: Math.max(8, rect.left - RECT_PAD),
+            width: Math.min(window.innerWidth - 16, rect.width + RECT_PAD * 2),
+            height: Math.min(
+                window.innerHeight - 16,
+                rect.height + RECT_PAD * 2,
+            ),
+            radius: 14,
         };
     }
 
+    let top = Infinity;
+    let left = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
+    for (const node of nodes) {
+        const rect = node.getBoundingClientRect();
+        if (rect.width < 4 || rect.height < 4) continue;
+        top = Math.min(top, rect.top);
+        left = Math.min(left, rect.left);
+        right = Math.max(right, rect.right);
+        bottom = Math.max(bottom, rect.bottom);
+    }
+    if (!Number.isFinite(top)) return null;
+
     return {
-        top: Math.max(8, rect.top - RECT_PAD),
-        left: Math.max(8, rect.left - RECT_PAD),
-        width: Math.min(window.innerWidth - 16, rect.width + RECT_PAD * 2),
-        height: Math.min(window.innerHeight - 16, rect.height + RECT_PAD * 2),
-        radius: 14,
+        top: Math.max(8, top - RECT_PAD),
+        left: Math.max(8, left - RECT_PAD),
+        width: Math.min(window.innerWidth - 16, right - left + RECT_PAD * 2),
+        height: Math.min(window.innerHeight - 16, bottom - top + RECT_PAD * 2),
+        radius: 16,
     };
+}
+
+function measureTarget(target: string | string[] | undefined): Hole | null {
+    return measureHoleFromNodes(queryTourNodes(targetIds(target)));
+}
+
+/** Scroll the spotlight target so the tour panel has room on the preferred side. */
+function scrollTargetForPanel(
+    target: string | string[] | undefined,
+    prefer: "above" | "below",
+    panelH: number,
+) {
+    const nodes = queryTourNodes(targetIds(target));
+    if (nodes.length === 0) return;
+
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const top = first.getBoundingClientRect().top;
+    const bottom = last.getBoundingClientRect().bottom;
+    const safeBottom = VIEW_PAD;
+
+    let delta = 0;
+    if (prefer === "below") {
+        const limit =
+            window.innerHeight - panelH - PANEL_GAP - safeBottom;
+        if (bottom > limit) delta = bottom - limit;
+    } else {
+        const limit = panelH + PANEL_GAP + VIEW_PAD;
+        if (top < limit) delta = top - limit;
+    }
+
+    if (Math.abs(delta) < 6) return;
+
+    // Tour locks body overflow — unlock briefly so the page can move.
+    const body = document.body;
+    const html = document.documentElement;
+    const prevBody = body.style.overflow;
+    const prevHtml = html.style.overflow;
+    body.style.overflow = "";
+    html.style.overflow = "";
+
+    const scroller = findScrollParent(first);
+    if (scroller) {
+        scroller.scrollBy({ top: delta, behavior: "auto" });
+    } else {
+        window.scrollBy({ top: delta, behavior: "auto" });
+    }
+
+    body.style.overflow = prevBody;
+    html.style.overflow = prevHtml;
 }
 
 function stripOnboardingParam(search: string) {
@@ -152,6 +266,8 @@ export function ToshaOnboarding() {
     const [stepIndex, setStepIndex] = useState(0);
     const [hole, setHole] = useState<Hole | null>(null);
     const [poseReady, setPoseReady] = useState(false);
+    const [panelH, setPanelH] = useState(PANEL_FALLBACK_H);
+    const panelRef = useRef<HTMLDivElement | null>(null);
 
     const autoTour = skipAll
         ? null
@@ -276,6 +392,12 @@ export function ToshaOnboarding() {
     useLayoutEffect(() => {
         if (!activeTour || !step) return;
         setPoseReady(false);
+
+        const preferBubble =
+            step.bubble === "above" || step.bubble === "below"
+                ? step.bubble
+                : "below";
+
         const refresh = () => {
             if (!onStepPage) {
                 setHole(null);
@@ -283,6 +405,34 @@ export function ToshaOnboarding() {
             }
             setHole(measureTarget(step.target));
         };
+
+        if (onStepPage && step.target) {
+            // Pick the side with more room before scrolling.
+            const preview = measureTarget(step.target);
+            let prefer: "above" | "below" = preferBubble;
+            if (preview) {
+                const spaceAbove = preview.top - VIEW_PAD;
+                const spaceBelow =
+                    window.innerHeight -
+                    (preview.top + preview.height) -
+                    VIEW_PAD;
+                if (
+                    prefer === "below" &&
+                    spaceBelow < panelH &&
+                    spaceAbove >= spaceBelow
+                ) {
+                    prefer = "above";
+                } else if (
+                    prefer === "above" &&
+                    spaceAbove < panelH &&
+                    spaceBelow > spaceAbove
+                ) {
+                    prefer = "below";
+                }
+            }
+            scrollTargetForPanel(step.target, prefer, panelH);
+        }
+
         refresh();
         const raf = requestAnimationFrame(refresh);
         const timer = window.setTimeout(refresh, 80);
@@ -294,7 +444,7 @@ export function ToshaOnboarding() {
             window.removeEventListener("resize", refresh);
             window.removeEventListener("scroll", refresh, true);
         };
-    }, [activeTour, step, onStepPage]);
+    }, [activeTour, step, onStepPage, panelH]);
 
     useEffect(() => {
         if (!activeTour) return;
@@ -323,32 +473,75 @@ export function ToshaOnboarding() {
             text: bridge.text,
             pose: step.pose,
             cta: undefined as string | undefined,
-            target: undefined as string | undefined,
+            target: undefined as string | string[] | undefined,
             bubble: "center" as const,
         };
     }, [step, onStepPage]);
 
+    useLayoutEffect(() => {
+        const node = panelRef.current;
+        if (!node || typeof ResizeObserver === "undefined") return;
+        const measure = () => {
+            const next = Math.ceil(node.getBoundingClientRect().height);
+            if (next > 0) setPanelH(next);
+        };
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(node);
+        return () => ro.disconnect();
+    }, [activeTour, stepIndex, display?.title, display?.text]);
+
     const bubbleStyle = useMemo(() => {
         if (!display?.target || !hole) return undefined;
-        const prefer =
+
+        const height = panelH || PANEL_FALLBACK_H;
+        const safeTop = VIEW_PAD;
+        const safeBottom = VIEW_PAD;
+        const spaceAbove = hole.top - safeTop;
+        const spaceBelow =
+            window.innerHeight - (hole.top + hole.height) - safeBottom;
+
+        let prefer: "above" | "below" =
             display.bubble === "above" || display.bubble === "below"
                 ? display.bubble
                 : hole.top > window.innerHeight * 0.45
                   ? "above"
                   : "below";
+
+        if (prefer === "below" && spaceBelow < height && spaceAbove >= spaceBelow) {
+            prefer = "above";
+        } else if (
+            prefer === "above" &&
+            spaceAbove < height &&
+            spaceBelow > spaceAbove
+        ) {
+            prefer = "below";
+        }
+
+        const side = "16px";
         if (prefer === "above") {
+            const naturalBottom = window.innerHeight - hole.top + PANEL_GAP;
+            const maxBottom = window.innerHeight - safeTop - height;
+            const bottom = Math.min(
+                Math.max(safeBottom, naturalBottom),
+                Math.max(safeBottom, maxBottom),
+            );
             return {
-                bottom: `${window.innerHeight - hole.top + 18}px`,
-                left: "16px",
-                right: "16px",
+                bottom: `${bottom}px`,
+                left: side,
+                right: side,
             } as const;
         }
+
+        const naturalTop = hole.top + hole.height + PANEL_GAP;
+        const maxTop = window.innerHeight - safeBottom - height;
+        const top = Math.min(Math.max(safeTop, naturalTop), Math.max(safeTop, maxTop));
         return {
-            top: `${hole.top + hole.height + 18}px`,
-            left: "16px",
-            right: "16px",
+            top: `${top}px`,
+            left: side,
+            right: side,
         } as const;
-    }, [hole, display]);
+    }, [hole, display, panelH]);
 
     if (!activeTour || !step || !display) {
         return IS_DEV ? (
@@ -405,6 +598,7 @@ export function ToshaOnboarding() {
             ) : null}
 
             <div
+                ref={panelRef}
                 className={
                     display.target && hole
                         ? styles.panelAnchored
