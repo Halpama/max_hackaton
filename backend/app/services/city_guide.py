@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 from urllib.parse import quote
 
@@ -179,7 +180,17 @@ async def build_city_guide(
     key = normalize_city_key(city)
     profile = dict(PROFILES.get(key) or _default_profile(city))
 
-    wiki = await fetch_wikipedia_city(city)
+    wiki_task = asyncio.create_task(fetch_wikipedia_city(city))
+    live_task = asyncio.create_task(
+        web_intel.discover_city_hints(city, ["sights", "walks"], max_queries=1)
+    ) if settings.searxng_enabled and (not digest or not hints) else None
+    climate_task = (
+        asyncio.create_task(seasonality_scores(float(lat), float(lon)))
+        if lat is not None and lon is not None
+        else None
+    )
+
+    wiki = await wiki_task
     if wiki.get("description") and (
         key not in PROFILES or not str(profile.get("type") or "").strip()
     ):
@@ -198,12 +209,8 @@ async def build_city_guide(
             if lead:
                 profile["summary"] = lead[:280]
 
-    live_hints, live_digest = [], None
-    if settings.searxng_enabled and (not digest or not hints):
-        live_hints, live_digest = await web_intel.discover_city_hints(
-            city, ["sights", "walks"], max_queries=1
-        )
-        _ = live_hints
+    live_hints, live_digest = await live_task if live_task is not None else ([], None)
+    _ = live_hints
 
     tip_digest = digest or live_digest
     highlights = [str(h) for h in (profile.get("highlights") or []) if h][:4]
@@ -211,9 +218,9 @@ async def build_city_guide(
     if tip_digest and not str(profile.get("summary") or "").strip():
         profile["summary"] = tip_digest.split("|", 1)[0].strip()[:280]
 
-    climate_scores: list[int] | None = None
-    if lat is not None and lon is not None:
-        climate_scores = await seasonality_scores(float(lat), float(lon))
+    climate_scores: list[int] | None = (
+        await climate_task if climate_task is not None else None
+    )
 
     scores = list(
         climate_scores

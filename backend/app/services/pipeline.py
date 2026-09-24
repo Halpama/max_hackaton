@@ -322,15 +322,21 @@ async def build_route(
     day_transits: list[list[TransitLeg | None]] = []
     day_transit_minutes: list[list[int]] = []
 
+    transit_jobs = [
+        transit.build_leg(
+            day[index].coordinates,
+            day[index + 1].coordinates,
+            metro=metro,
+        )
+        for day in grouped
+        for index in range(len(day) - 1)
+    ]
+    transit_results = iter(await asyncio.gather(*transit_jobs))
     for day in grouped:
         legs: list[TransitLeg | None] = []
         minutes: list[int] = []
-        for index in range(len(day) - 1):
-            leg, leg_minutes = await transit.build_leg(
-                day[index].coordinates,
-                day[index + 1].coordinates,
-                metro=metro,
-            )
+        for _ in range(len(day) - 1):
+            leg, leg_minutes = next(transit_results)
             legs.append(leg)
             minutes.append(leg_minutes)
         day_transits.append(legs)
@@ -349,7 +355,17 @@ async def build_route(
 
     # 5. Формирование расписания
     await stage_start("schedule")
-    forecast = await _day_forecast(lat=lat, lon=lon, slots=slots)
+    forecast, guide = await asyncio.gather(
+        _day_forecast(lat=lat, lon=lon, slots=slots),
+        _build_city_guide_safe(
+            city,
+            start_at.date(),
+            lat=lat,
+            lon=lon,
+            digest=city_digest,
+            hints=discovery_hints,
+        ),
+    )
     places: dict[str, Place] = {}
     days: list[DayPlan] = []
 
@@ -433,14 +449,7 @@ async def build_route(
         date_label=formatting.date_range_label(start_at.date(), end_at.date()),
         travelers_label=formatting.travelers_label(draft.adults, draft.children),
         budget_label=budget_service.budget_label(draft.budget),
-        city_guide=await _build_city_guide_safe(
-            city,
-            start_at.date(),
-            lat=lat,
-            lon=lon,
-            digest=city_digest,
-            hints=discovery_hints,
-        ),
+        city_guide=guide,
         days=[day for day in days if day.activities] or days[:1],
         places=places,
     )
