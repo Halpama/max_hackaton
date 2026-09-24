@@ -364,7 +364,11 @@ export function BottomNav() {
                                         ? "nav-favorites"
                                         : item.id === "trips"
                                           ? "nav-trips"
-                                          : undefined
+                                          : item.id === "packing"
+                                            ? "nav-packing"
+                                            : item.id === "budget"
+                                              ? "nav-budget"
+                                              : undefined
                                 }
                                 className={
                                     item.emphasis

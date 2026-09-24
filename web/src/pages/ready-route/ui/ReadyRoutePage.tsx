@@ -161,7 +161,7 @@ export function ReadyRoutePage() {
 
     return (
         <Screen flush>
-            <div className={styles.summary}>
+            <div className={styles.summary} data-tour="route-header">
                 <div className={styles.top}>
                     <h1 className={styles.city}>{route.city}</h1>
                     {activeTripId ? (
@@ -205,7 +205,7 @@ export function ReadyRoutePage() {
 
             {mainTab === "route" ? (
                 <div key="route" className={styles.panel}>
-                    <div className={styles.dayControls}>
+                    <div className={styles.dayControls} data-tour="route-days">
                         <DayTabs
                             days={dayTabItems}
                             activeId={
@@ -236,6 +236,7 @@ export function ReadyRoutePage() {
                         <>
                             <div
                                 className={`${styles.mapWrap} ${styles.mapReveal}`}
+                                data-tour="route-map"
                             >
                                 <DayRouteMap
                                     places={dayPlaces}

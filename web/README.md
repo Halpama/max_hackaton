@@ -55,9 +55,15 @@ src/
 | `place/`   | PlaceDetails                                                         |
 | `nav/`     | BottomNav + helpers deep-link                                        |
 
-Отдельно: `features/onboarding` — первый заход с маскотом Тошей (`ToshaOnboarding`).
-Повтор в dev: `?onboarding=1`, чип «Тоша · demo», или «Пройти с Тошей» в справке.
-Выключить: `?onboarding=0`.
+Отдельно: `features/onboarding` — туры маскота Тоши:
+
+1. **home** — первый заход на главную  
+2. **create** — первое создание маршрута (`/trips/new` → `/preferences`)  
+3. **route** — первый успешный маршрут  
+
+Повтор в dev: `?onboarding=home|create|route`, чипы «Тоша · demo» / «reset all»,  
+или «Пройти с Тошей» в справке. Выключить: `?onboarding=0`.  
+Пока тур активен, клики по остальному UI блокируются.
 
 Импортируйте публичное API так:
 

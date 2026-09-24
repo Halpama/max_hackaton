@@ -41,29 +41,35 @@ export function PreferencesPage() {
   return (
     <Screen
       footer={
-        <Button
-          stretched
-          size="large"
-          disabled={submitting}
-          onClick={() => void handleSubmit()}
-        >
-          {submitting ? 'Создаём поездку…' : 'Построить маршрут'}
-        </Button>
+        <div data-tour="pref-build">
+          <Button
+            stretched
+            size="large"
+            disabled={submitting}
+            onClick={() => void handleSubmit()}
+          >
+            {submitting ? 'Создаём поездку…' : 'Построить маршрут'}
+          </Button>
+        </div>
       }
     >
-      <Section
-        label="Интересы"
-        hint="Что вам ближе: музеи, еда, прогулки — отметьте всё, что важно."
-      >
-        <InterestChips value={draft.interests} onToggle={toggleInterest} />
-      </Section>
+      <div data-tour="pref-interests">
+        <Section
+          label="Интересы"
+          hint="Что вам ближе: музеи, еда, прогулки — отметьте всё, что важно."
+        >
+          <InterestChips value={draft.interests} onToggle={toggleInterest} />
+        </Section>
+      </div>
 
-      <Section
-        label="Темп поездки"
-        hint="Спокойный — меньше дел в день, активный — насыщенный график."
-      >
-        <PaceSegment value={draft.pace} onChange={setPace} />
-      </Section>
+      <div data-tour="pref-pace">
+        <Section
+          label="Темп поездки"
+          hint="Спокойный — меньше дел в день, активный — насыщенный график."
+        >
+          <PaceSegment value={draft.pace} onChange={setPace} />
+        </Section>
+      </div>
 
       {error ? (
         <p style={{ color: '#ef4444', fontSize: 14, fontWeight: 600, margin: 0 }}>
