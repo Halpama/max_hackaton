@@ -4,6 +4,7 @@ import {
     useId,
     useLayoutEffect,
     useMemo,
+    useRef,
     useState,
 } from "react";
 import { createPortal } from "react-dom";
@@ -26,6 +27,8 @@ import {
     type OnboardingStep,
 } from "../model/steps";
 import styles from "./ToshaOnboarding.module.css";
+
+const EMPTY_STEPS: OnboardingStep[] = [];
 
 type Hole = {
     top: number;
@@ -142,64 +145,66 @@ export function ToshaOnboarding() {
     const { route, routeState } = useTripPlanner();
     const routeReady = routeState === "ready" && Boolean(route);
     const query = resolveOnboardingQuery(location.search);
+    const forceTour = query.mode === "force" ? query.tour : null;
+    const skipAll = query.mode === "skip";
 
-    const [forcedTour, setForcedTour] = useState<TourId | null>(() =>
-        query.mode === "force" ? query.tour : null,
-    );
+    const [forcedTour, setForcedTour] = useState<TourId | null>(() => forceTour);
     const [stepIndex, setStepIndex] = useState(0);
     const [hole, setHole] = useState<Hole | null>(null);
     const [poseReady, setPoseReady] = useState(false);
 
-    const autoTour =
-        query.mode === "skip"
-            ? null
-            : inferTourFromPath(location.pathname, location.search, routeReady);
+    const autoTour = skipAll
+        ? null
+        : inferTourFromPath(location.pathname, location.search, routeReady);
 
-    const activeTour: TourId | null =
-        query.mode === "skip" ? null : (forcedTour ?? autoTour);
+    const activeTour: TourId | null = skipAll ? null : (forcedTour ?? autoTour);
 
-    const steps = activeTour ? TOUR_STEPS[activeTour] : [];
+    const steps = activeTour ? TOUR_STEPS[activeTour] : EMPTY_STEPS;
     const step = steps[stepIndex] ?? steps[0];
     const isLast = stepIndex >= steps.length - 1;
     const onStepPage = step ? stepMatchesPath(step, location.pathname) : false;
 
     useEffect(() => {
-        if (query.mode === "force") {
-            resetTour(query.tour);
-            setForcedTour(query.tour);
+        if (forceTour) {
+            resetTour(forceTour);
+            setForcedTour(forceTour);
             setStepIndex(0);
             if (
-                query.tour === "home" &&
+                forceTour === "home" &&
                 location.pathname !== "/" &&
                 location.pathname !== ROUTES.home
             ) {
                 navigate(`${ROUTES.home}?onboarding=home`, { replace: true });
             } else if (
-                query.tour === "create" &&
+                forceTour === "create" &&
                 location.pathname !== ROUTES.newTrip
             ) {
                 navigate(`${ROUTES.newTrip}?onboarding=create`, {
                     replace: true,
                 });
             } else if (
-                query.tour === "prefs" &&
+                forceTour === "prefs" &&
                 location.pathname !== ROUTES.preferences
             ) {
                 navigate(`${ROUTES.preferences}?onboarding=prefs`, {
                     replace: true,
                 });
             } else if (
-                query.tour === "route" &&
+                forceTour === "route" &&
                 location.pathname !== ROUTES.route
             ) {
                 navigate(`${ROUTES.route}?onboarding=route`, { replace: true });
             }
-        } else if (query.mode === "skip") {
-            setForcedTour(null);
+            return;
         }
-    }, [query, location.pathname, navigate]);
+        if (skipAll) setForcedTour(null);
+    }, [forceTour, skipAll, location.pathname, navigate]);
 
+    // Reset step only when the active tour identity changes — not on every render.
+    const prevTourRef = useRef<TourId | null>(null);
     useEffect(() => {
+        if (prevTourRef.current === activeTour) return;
+        prevTourRef.current = activeTour;
         setStepIndex(0);
     }, [activeTour]);
 
@@ -212,7 +217,7 @@ export function ToshaOnboarding() {
         const nextIndex = steps.findIndex((item) =>
             stepMatchesPath(item, location.pathname),
         );
-        if (nextIndex >= 0) setStepIndex(nextIndex);
+        if (nextIndex >= 0 && nextIndex !== stepIndex) setStepIndex(nextIndex);
     }, [activeTour, location.pathname, stepIndex, steps]);
 
     const finish = useCallback(
