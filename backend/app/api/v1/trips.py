@@ -20,6 +20,7 @@ from app.schemas.trip import (
     RoutePlan,
     TripCreated,
     TripDraft,
+    TripEditDraft,
     TripResponse,
     TripSummary,
 )
@@ -56,6 +57,13 @@ def trip_to_draft(trip: Trip) -> TripDraft:
         interests=list(trip.interests or []),
         pace=trip.pace,
         find_housing=trip.find_housing,
+    )
+
+
+def trip_to_edit_draft(trip: Trip) -> TripEditDraft:
+    draft = trip_to_draft(trip)
+    return TripEditDraft.model_validate(
+        draft.model_dump(exclude={"destination"})
     )
 
 
@@ -187,6 +195,96 @@ async def get_trips(session: DbSession, user: CurrentUser) -> list[TripSummary]:
 @router.get("/{trip_id}", response_model=TripResponse)
 async def get_trip_by_id(trip: OwnedTrip) -> TripResponse:
     return trip_to_response(trip)
+
+
+@router.get(
+    "/{trip_id}/edit",
+    response_model=TripEditDraft,
+    summary="Получить параметры поездки для редактирования",
+    description=(
+        "Возвращает параметры формы для страницы /trips/new. "
+        "Город намеренно не включается: он сохраняется на сервере."
+    ),
+)
+async def get_trip_edit_draft(trip: OwnedTrip) -> TripEditDraft:
+    """Return the form parameters while keeping the destination server-owned."""
+    return trip_to_edit_draft(trip)
+
+
+@router.patch(
+    "/{trip_id}",
+    response_model=TripCreated,
+    summary="Изменить параметры поездки",
+    description=(
+        "Сохраняет новые параметры без изменения города, очищает старый маршрут "
+        "и запускает его повторную генерацию."
+    ),
+    responses={
+        status.HTTP_409_CONFLICT: {
+            "description": "Поездка уже находится в процессе генерации."
+        }
+    },
+)
+async def update_trip(
+    parameters: TripEditDraft,
+    trip: OwnedTrip,
+    session: DbSession,
+) -> TripCreated:
+    """Replace editable parameters and regenerate the existing trip."""
+    if trip.status in {"pending", "running"}:
+        raise ConflictError("Нельзя изменить поездку во время генерации")
+
+    draft = TripDraft(
+        destination=trip.destination,
+        **parameters.model_dump(),
+    )
+    start_at, end_at = parse_draft_bounds(draft)
+    generation_id = uuid.uuid4()
+    result = await session.execute(
+        update(Trip)
+        .where(
+            Trip.id == trip.id,
+            Trip.status.not_in(("pending", "running")),
+        )
+        .values(
+            start_at=start_at,
+            end_at=end_at,
+            budget=draft.budget,
+            travelers=draft.travelers,
+            adults=draft.adults,
+            children=draft.children,
+            interests=list(draft.interests),
+            pace=draft.pace,
+            find_housing=draft.find_housing,
+            status="pending",
+            generation_id=generation_id,
+            stage=None,
+            error=None,
+            route_plan=None,
+        )
+    )
+    if result.rowcount != 1:
+        raise ConflictError("Поездка уже начала генерироваться")
+    await session.commit()
+    await record_event(
+        "trip_updated",
+        user_id=trip.user_id,
+        trip_id=trip.id,
+        session=session,
+        payload={"action": "edit_parameters"},
+    )
+
+    old_task = _trip_tasks.get(trip.id)
+    if old_task is not None and not old_task.done():
+        old_task.cancel()
+    try:
+        redis = await get_redis()
+        await redis.delete(keys.trip_progress_log(trip.id), f"trip:{trip.id}:seq")
+    except Exception as exc:  # noqa: BLE001 - stale progress is not fatal
+        logger.warning("Could not reset progress for %s: %s", trip.id, exc)
+
+    _spawn(trip.id, draft, generation_id)
+    return TripCreated(id=str(trip.id), status="pending")
 
 
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -368,6 +368,8 @@ flowchart TB
 POST   /api/v1/trips                 создать задачу генерации
 GET    /api/v1/trips                 список поездок пользователя
 GET    /api/v1/trips/{id}            статус + draft + RoutePlan
+GET    /api/v1/trips/{id}/edit       параметры формы без города
+PATCH  /api/v1/trips/{id}            изменить параметры и пересобрать маршрут
 DELETE /api/v1/trips/{id}            архивировать (soft-hide)
 GET    /api/v1/trips/{id}/stream     SSE: stage | done | error
 POST   /api/v1/trips/{id}/retry      перезапуск

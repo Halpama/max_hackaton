@@ -63,6 +63,8 @@ docker compose exec -e OPENTRIPMAP_API_KEY=stub api python scripts/offline_e2e.p
 | POST   | `/api/v1/trips`                       | создать поездку, вернуть `id` (202)           |
 | GET    | `/api/v1/trips/{id}/stream`           | SSE: `stage`, `done`, `error`                 |
 | GET    | `/api/v1/trips/{id}`                  | статус + готовый `RoutePlan`                  |
+| GET    | `/api/v1/trips/{id}/edit`              | параметры формы без города                    |
+| PATCH  | `/api/v1/trips/{id}`                   | изменить параметры и пересобрать маршрут     |
 | GET    | `/api/v1/trips`                       | список поездок для главной                    |
 | DELETE | `/api/v1/trips/{id}`                  | архивировать поездку (soft-hide)              |
 | POST   | `/api/v1/trips/{id}/retry`            | перезапустить упавшую генерацию               |
