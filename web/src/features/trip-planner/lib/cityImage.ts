@@ -81,7 +81,7 @@ async function fetchWikipediaThumb(city: string): Promise<string | null> {
     {
       headers: {
         Accept: 'application/json',
-        'Api-User-Agent': 'TripPlannerMAX/1.0 (hackathon)',
+        'Api-User-Agent': '2RIST/1.0 (hackathon)',
       },
     },
   )

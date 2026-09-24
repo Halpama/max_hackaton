@@ -175,7 +175,7 @@ def test_prettify_title(raw: str, expected: str):
     assert prettify_title(raw) == expected
 
 
-def test_bot_planner_keyboard_uses_bot_identity_not_spa_url():
+def test_bot_planner_keyboard_native_open_only():
     from app.bot.client import MaxBotClient
 
     client = MaxBotClient()
@@ -189,6 +189,13 @@ def test_bot_planner_keyboard_uses_bot_identity_not_spa_url():
     # Must not put the Vercel SPA URL into open_app.web_app
     assert not str(open_app.get("web_app", "")).startswith("http")
     assert client.max_deeplink() == "https://max.ru/trip_planner_bot?startapp"
+
+    # Web app opens only natively — no browser / deeplink link duplicates.
+    button_types = [btn["type"] for row in rows for btn in row]
+    assert "link" not in button_types
+    assert set(button_types) == {"open_app", "callback"}
+    utility = {btn["payload"] for row in rows for btn in row if btn["type"] == "callback"}
+    assert utility == {"/help", "/about"}
 
 
 def test_bot_command_normalization():

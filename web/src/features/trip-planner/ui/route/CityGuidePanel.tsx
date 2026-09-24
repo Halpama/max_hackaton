@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { CityGuide } from '../model'
-import { resolveCityImage } from '../lib/cityImage'
-import { SoftImage } from './SoftImage'
+import type { CityGuide } from '../../model'
+import { resolveCityImage } from '../../lib/cityImage'
+import { SoftImage } from '../shared/SoftImage'
 import styles from './CityGuidePanel.module.css'
 
 interface CityGuidePanelProps {

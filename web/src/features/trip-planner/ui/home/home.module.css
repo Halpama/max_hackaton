@@ -528,14 +528,34 @@
 }
 
 .titleRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  column-gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.titleRow h1 {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  text-align: center;
+  justify-self: center;
+}
+
+.brandLogo {
+  justify-self: start;
+  display: block;
+  height: 28px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  user-select: none;
 }
 
 .helpBtn {
-  flex-shrink: 0;
+  justify-self: end;
   width: 36px;
   height: 36px;
   display: inline-flex;

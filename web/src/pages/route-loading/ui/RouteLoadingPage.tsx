@@ -11,7 +11,7 @@ import {
   useTripPlanner,
 } from '@/features/trip-planner'
 import { retryTrip, streamTrip } from '@/features/trip-planner/api'
-import styles from '@/features/trip-planner/ui/screens.module.css'
+import styles from '@/features/trip-planner/ui/shared/screens.module.css'
 
 export function RouteLoadingPage() {
   const navigate = useNavigate()

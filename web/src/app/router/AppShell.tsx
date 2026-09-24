@@ -2,10 +2,7 @@ import { useEffect } from 'react'
 import { Outlet, useLocation, useMatches, useNavigationType, useResolvedPath } from 'react-router-dom'
 import { ROUTES } from '@/shared/config'
 import { useMaxBackButton } from '@/shared/hooks'
-import {
-  BottomNav,
-  shouldShowBottomNav,
-} from '@/features/trip-planner/ui/BottomNav'
+import { BottomNav, shouldShowBottomNav } from '@/features/trip-planner'
 import styles from './AppShell.module.css'
 
 export function AppShell() {

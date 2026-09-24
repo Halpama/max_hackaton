@@ -1,8 +1,8 @@
 import type { MouseEvent } from 'react'
 import { yandexGoRouteUrl, yandexMapsRouteUrl } from '@/shared/lib/yandex'
 import { getWebApp, isMaxWebApp } from '@/shared/lib/max'
-import type { TransitLeg } from '../model'
-import { WalkIcon as SharedWalkIcon } from './icons'
+import type { TransitLeg } from '../../model'
+import { WalkIcon as SharedWalkIcon } from '../shared/icons'
 import styles from './TransitHint.module.css'
 
 interface TransitHintProps {

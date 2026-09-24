@@ -2,7 +2,7 @@
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul 2>&1
 
-rem Trip Planner — jury-friendly launcher (Windows)
+rem 2РИСТ — jury-friendly launcher (Windows)
 rem Usage: trip.cmd <command>   or   trip <command> if . is on PATH
 
 cd /d "%~dp0"
@@ -112,7 +112,7 @@ exit /b 1
 
 :help
 echo.
-echo Trip Planner — quick launcher for jury / demo
+echo 2РИСТ — quick launcher for jury / demo
 echo.
 echo Usage:
 echo   trip.cmd ^<command^>
@@ -165,7 +165,7 @@ call :ensure_env
 if errorlevel 1 exit /b 1
 call :export_web_build_env
 echo.
-echo === Starting Trip Planner ===
+echo === Starting 2РИСТ ===
 if defined VITE_YANDEX_MAPS_TILES_KEY (
   echo -^> Yandex tiles key: from web\.env (build arg)
 ) else (

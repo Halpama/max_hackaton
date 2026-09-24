@@ -9,19 +9,19 @@ import {
   HeartIcon,
   InfoIcon,
   Screen,
+  SoftImage,
   StarIcon,
   StatusView,
   WarningIcon,
+  placeNavState,
   useTripPlanner,
   type Place,
   type TripSummary,
 } from '@/features/trip-planner'
 import { knownCityImage, resolveCityImage } from '@/features/trip-planner/lib/cityImage'
 import { formatPlaceTitle } from '@/features/trip-planner/lib/format'
-import { placeNavState } from '@/features/trip-planner/ui/BottomNav'
-import { SoftImage } from '@/features/trip-planner/ui/SoftImage'
-import tripStyles from '@/features/trip-planner/ui/trip.module.css'
-import styles from '@/features/trip-planner/ui/home.module.css'
+import tripStyles from '@/features/trip-planner/ui/shared/trip.module.css'
+import styles from '@/features/trip-planner/ui/home/home.module.css'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -31,6 +31,7 @@ export function HomePage() {
   const tab = searchParams.get('tab') === 'favorites' ? 'favorites' : 'trips'
   const [query, setQuery] = useState('')
   const [city, setCity] = useState('Все')
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const cities = useMemo(() => {
     const unique = [...new Set(favoritePlaces.map((place) => place.city))]
@@ -66,6 +67,7 @@ export function HomePage() {
           onCreate={() => navigate(ROUTES.newTrip)}
           onOpenTrip={handleOpenTrip}
           onRemoveTrip={removeTrip}
+          onHelp={() => setHelpOpen(true)}
         />
       ) : (
         <FavoritesTab
@@ -81,9 +83,28 @@ export function HomePage() {
             navigate(ROUTES.place(placeId), { state: placeNavState('favorites') })
           }
           onToggleFavorite={toggleFavorite}
+          onHelp={() => setHelpOpen(true)}
         />
       )}
+      {helpOpen ? <HowItWorksModal onClose={() => setHelpOpen(false)} /> : null}
     </Screen>
+  )
+}
+
+function BrandTitleRow({ title, onHelp }: { title: string; onHelp: () => void }) {
+  return (
+    <div className={styles.titleRow}>
+      <img src="/logo.svg" alt="2РИСТ" className={styles.brandLogo} />
+      <h1 className={tripStyles.title}>{title}</h1>
+      <button
+        type="button"
+        className={styles.helpBtn}
+        aria-label="Как это работает"
+        onClick={onHelp}
+      >
+        <InfoIcon />
+      </button>
+    </div>
   )
 }
 
@@ -94,6 +115,7 @@ function TripsTab({
   onCreate,
   onOpenTrip,
   onRemoveTrip,
+  onHelp,
 }: {
   trips: TripSummary[]
   state: 'idle' | 'loading' | 'ready' | 'error'
@@ -101,8 +123,8 @@ function TripsTab({
   onCreate: () => void
   onOpenTrip: (tripId: string) => void
   onRemoveTrip: (tripId: string) => Promise<void>
+  onHelp: () => void
 }) {
-  const [helpOpen, setHelpOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TripSummary | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -121,17 +143,7 @@ function TripsTab({
 
   return (
     <div className={styles.stack}>
-      <div className={styles.titleRow}>
-        <h1 className={tripStyles.title}>Мои поездки</h1>
-        <button
-          type="button"
-          className={styles.helpBtn}
-          aria-label="Как это работает"
-          onClick={() => setHelpOpen(true)}
-        >
-          <InfoIcon />
-        </button>
-      </div>
+      <BrandTitleRow title="Мои поездки" onHelp={onHelp} />
 
       {state === 'error' ? (
         <StatusView
@@ -202,7 +214,6 @@ function TripsTab({
         </div>
       )}
 
-      {helpOpen ? <HowItWorksModal onClose={() => setHelpOpen(false)} /> : null}
       {pendingDelete ? (
         <DeleteTripModal
           city={pendingDelete.city}
@@ -458,6 +469,7 @@ function FavoritesTab({
   hasAny,
   onOpenPlace,
   onToggleFavorite,
+  onHelp,
 }: {
   query: string
   onQueryChange: (value: string) => void
@@ -468,10 +480,11 @@ function FavoritesTab({
   hasAny: boolean
   onOpenPlace: (placeId: string) => void
   onToggleFavorite: (placeId: string) => void
+  onHelp: () => void
 }) {
   return (
     <div className={styles.stack}>
-      <h1 className={tripStyles.title}>Избранное</h1>
+      <BrandTitleRow title="Избранное" onHelp={onHelp} />
 
       {!hasAny ? (
         <StatusView

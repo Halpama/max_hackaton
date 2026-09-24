@@ -1,4 +1,4 @@
-import type { DayPlan, DayWeather, WeatherIcon } from '../model'
+import type { DayPlan, DayWeather, WeatherIcon } from '../../model'
 import styles from './DayWeatherBadge.module.css'
 
 /**

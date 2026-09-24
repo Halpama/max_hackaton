@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { MinusIcon, PlusIcon } from './icons'
+import { MinusIcon, PlusIcon } from '../shared/icons'
 import styles from './Stepper.module.css'
 
 interface StepperProps {

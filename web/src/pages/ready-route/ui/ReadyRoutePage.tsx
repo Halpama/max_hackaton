@@ -3,31 +3,27 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ROUTES } from "@/shared/config";
 import {
     ActivityCard,
+    BudgetPanel,
     CalendarIcon,
     CityGuidePanel,
     CompassIcon,
+    DayRouteMap,
     DayTabs,
+    DayWeatherBadge,
     LoadingView,
+    PackingPanel,
     PersonIcon,
     Screen,
     StatusView,
     TransitHint,
     WarningIcon,
+    formatMoney,
+    parseTripTab,
+    placeNavState,
+    useTripLocalState,
     useTripPlanner,
 } from "@/features/trip-planner";
-import { DayRouteMap } from "@/features/trip-planner/ui/DayRouteMap";
-import { DayWeatherBadge } from "@/features/trip-planner/ui/DayWeatherBadge";
-import {
-    placeNavState,
-    parseTripTab,
-} from "@/features/trip-planner/ui/BottomNav";
-import { PackingPanel } from "@/features/trip-planner/ui/PackingPanel";
-import { BudgetPanel } from "@/features/trip-planner/ui/BudgetPanel";
-import {
-    formatMoney,
-    useTripLocalState,
-} from "@/features/trip-planner/model/useTripLocalState";
-import styles from "@/features/trip-planner/ui/screens.module.css";
+import styles from "@/features/trip-planner/ui/shared/screens.module.css";
 
 const ABOUT_TAB_ID = "about";
 

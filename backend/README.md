@@ -1,4 +1,4 @@
-# Trip Planner backend
+# 2РИСТ backend
 
 FastAPI + Redis + Postgres. Собирает маршрут поездки из OpenTripMap и GigaChat
 и отдаёт прогресс по SSE.
@@ -77,7 +77,7 @@ docker compose exec -e OPENTRIPMAP_API_KEY=stub api python scripts/offline_e2e.p
 | DELETE | `/api/v1/trips/{id}/ledger/{entryId}` | удалить запись                                |
 | GET    | `/api/v1/geo/cities`                  | автокомплит городов (Open-Meteo, только RU)   |
 | GET    | `/api/v1/bot/status`                  | конфиг бота + `/me` (если токен есть)         |
-| POST   | `/api/v1/bot/invite`                  | отправить пользователю клавиатуру-инвайт      |
+| POST   | `/api/v1/bot/invite`                  | клавиатура-инвайт (в prod — с секретом)       |
 | POST   | `/api/v1/bot/webhook`                 | вебхук MAX (secret в `X-Max-Bot-Api-Secret`)  |
 
 Лимиты: `/api/v1` закрыт fixed-window rate limit на Redis (глобально 120/мин,
@@ -197,20 +197,19 @@ docker compose exec redis redis-cli --scan --pattern 'trip:plan:*' | \
 | `MAX_BOT_MODE` | `auto` \| `webhook` \| `polling` \| `off` |
 | `MAX_BOT_WEBHOOK_URL` | публичный `https://…/api/v1/bot/webhook` |
 | `MAX_BOT_WEBHOOK_SECRET` | опционально, заголовок `X-Max-Bot-Api-Secret` |
-| `MAX_WEBAPP_URL` | SPA URL для кнопки «в браузере» |
+| `MAX_WEBAPP_URL` | SPA URL (диагностика / about); в клавиатуре не кнопка |
 
-`open_app` открывает мини-приложение, **привязанное к боту в кабинете**
-(Расширенные настройки → ссылка). В кнопку уходят `web_app=<username>` и
-`contact_id=<bot user_id>` из `GET /me`, а не URL SPA.
+`open_app` — **единственный** способ открыть мини-приложение из бота.
+Кнопка уходит с `web_app=<username>` и `contact_id=<bot user_id>` из `GET /me`;
+сам URL SPA привязывают в кабинете MAX (Расширенные настройки → ссылка).
+Ссылки «Открыть в браузере» / deeplink в клавиатуре не дублируют открытие.
 
 Если от организаторов есть **только токен** бота:
 1. `MAX_BOT_TOKEN=…`, `MAX_BOT_ENABLED=true`, `MAX_BOT_MODE=polling`
 2. Перезапуск API — бот начнёт long polling (webhook не нужен)
-3. В чате `/start` → кнопки работают
+3. В чате `/start` → нативная кнопка `open_app`
 4. Чтобы `open_app` открыл именно `https://2-rist.ru`, в кабинете MAX у
-   этого бота должна быть прописана ссылка мини-приложения. Без доступа в
-   кабинет кнопку «в MAX» настроит тот, кто создал бота; «Открыть в браузере»
-   уже ведёт на `MAX_WEBAPP_URL`.
+   этого бота должна быть прописана ссылка мини-приложения.
 
 Прод-стенд: `MAX_WEBAPP_URL=https://2-rist.ru`, webhook (когда есть HTTPS):
 `MAX_BOT_WEBHOOK_URL=https://api.2-rist.ru/api/v1/bot/webhook`,
@@ -219,7 +218,8 @@ docker compose exec redis redis-cli --scan --pattern 'trip:plan:*' | \
 `auto`: если задан `MAX_BOT_WEBHOOK_URL` — регистрирует webhook, иначе long
 polling (удобно локально без туннеля). Из корня репо: `./trip bot on`.
 
-Эндпоинты: `GET /api/v1/bot/status`, `POST /api/v1/bot/invite`,
+Эндпоинты: `GET /api/v1/bot/status`, `POST /api/v1/bot/invite`
+(в production — только с `X-Max-Bot-Api-Secret` = `MAX_BOT_WEBHOOK_SECRET`),
 `POST /api/v1/bot/webhook`.
 
 Проверка:
