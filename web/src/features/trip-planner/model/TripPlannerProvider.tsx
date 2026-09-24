@@ -107,6 +107,9 @@ export function TripPlannerProvider({ children }: { children: ReactNode }) {
     const [activeTripId, setActiveTripId] = useState<string | null>(() =>
         USE_MOCKS ? "mock" : readActiveTripId(),
     );
+    const [activeTripDraft, setActiveTripDraft] = useState<TripDraft | null>(
+        () => (USE_MOCKS ? createDefaultTripDraft() : null),
+    );
     const [route, setRoute] = useState<RoutePlan | null>(
         USE_MOCKS ? MOCK_ROUTE : null,
     );
@@ -133,11 +136,17 @@ export function TripPlannerProvider({ children }: { children: ReactNode }) {
     favoritesRef.current = favorites;
     const routeRef = useRef(route);
     routeRef.current = route;
+    const draftRef = useRef(draft);
+    draftRef.current = draft;
     const favoritePlacesRef = useRef(favoritePlaces);
     favoritePlacesRef.current = favoritePlaces;
 
     const updateDraft = useCallback((patch: Partial<TripDraft>) => {
         setDraft((prev) => applyDraftPatch(patch, prev));
+    }, []);
+
+    const replaceDraft = useCallback((next: TripDraft) => {
+        setDraft(next);
     }, []);
 
     const toggleInterest = useCallback((id: InterestId) => {
@@ -193,6 +202,7 @@ export function TripPlannerProvider({ children }: { children: ReactNode }) {
             if (activeTripId === tripId) {
                 setActiveTripId(null);
                 persistActiveTripId(null);
+                setActiveTripDraft(null);
                 setRoute(null);
                 setRouteState("idle");
                 setRouteError(null);
@@ -241,11 +251,11 @@ export function TripPlannerProvider({ children }: { children: ReactNode }) {
 
             if (trip.route) {
                 setRoute(trip.route);
-                setDraft(trip.draft);
+                setActiveTripDraft(trip.draft);
                 setRouteState("ready");
             } else {
                 setRoute(null);
-                setDraft(trip.draft);
+                setActiveTripDraft(trip.draft);
                 setRouteState("error");
                 setRouteError(trip.error ?? "Маршрут ещё не построен");
             }
@@ -257,7 +267,7 @@ export function TripPlannerProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    /** Adopt a route delivered by the SSE stream without an extra round trip. */
+    /** Adopt a route from SSE, keep its params for the open trip, clear the wizard. */
     const adoptRoute = useCallback((tripId: string, next: RoutePlan) => {
         routeRequestRef.current += 1;
         setActiveTripId(tripId);
@@ -265,6 +275,8 @@ export function TripPlannerProvider({ children }: { children: ReactNode }) {
         setRoute(next);
         setRouteState("ready");
         setRouteError(null);
+        setActiveTripDraft(draftRef.current);
+        setDraft(createDefaultTripDraft());
     }, []);
 
     const toggleFavorite = useCallback((placeId: string) => {
@@ -354,12 +366,14 @@ export function TripPlannerProvider({ children }: { children: ReactNode }) {
         () => ({
             draft,
             updateDraft,
+            replaceDraft,
             toggleInterest,
             setPace,
             setAdults,
             setChildren,
             resetDraft,
             activeTripId,
+            activeTripDraft,
             route,
             routeState,
             routeError,
@@ -378,12 +392,14 @@ export function TripPlannerProvider({ children }: { children: ReactNode }) {
         [
             draft,
             updateDraft,
+            replaceDraft,
             toggleInterest,
             setPace,
             setAdults,
             setChildren,
             resetDraft,
             activeTripId,
+            activeTripDraft,
             route,
             routeState,
             routeError,

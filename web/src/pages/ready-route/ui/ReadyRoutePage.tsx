@@ -15,9 +15,9 @@ import {
     PersonIcon,
     Screen,
     StatusView,
+    TripActionsMenu,
     TransitHint,
     WarningIcon,
-    formatMoney,
     parseTripTab,
     placeNavState,
     useTripLocalState,
@@ -30,8 +30,21 @@ const ABOUT_TAB_ID = "about";
 export function ReadyRoutePage() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { route, routeState, routeError, activeTripId, openTrip, draft } =
-        useTripPlanner();
+    const {
+        route,
+        routeState,
+        routeError,
+        activeTripId,
+        activeTripDraft,
+        openTrip,
+        removeTrip,
+        resetDraft,
+    } = useTripPlanner();
+    const startNewTrip = () => {
+        resetDraft();
+        navigate(ROUTES.newTrip);
+    };
+    const [actionsOpen, setActionsOpen] = useState(false);
 
     const requestedTripId = searchParams.get("tripId");
     const requestedDayId = searchParams.get("day");
@@ -101,7 +114,7 @@ export function ReadyRoutePage() {
     }, [route]);
 
     const tripId = activeTripId ?? "";
-    const plannedBudget = Math.max(0, draft.budget);
+    const plannedBudget = Math.max(0, activeTripDraft?.budget ?? 0);
 
     const {
         packing,
@@ -136,7 +149,7 @@ export function ReadyRoutePage() {
                         "Создайте новую поездку, чтобы увидеть маршрут."
                     }
                     actionLabel="Новая поездка"
-                    onAction={() => navigate(ROUTES.newTrip)}
+                    onAction={startNewTrip}
                     secondaryActionLabel="На главную"
                     onSecondaryAction={() => navigate(ROUTES.home)}
                 />
@@ -151,10 +164,31 @@ export function ReadyRoutePage() {
             <div className={styles.summary}>
                 <div className={styles.top}>
                     <h1 className={styles.city}>{route.city}</h1>
-                    <RemainingBadge
-                        remaining={remaining}
-                        plannedBudget={plannedBudget}
-                    />
+                    {activeTripId ? (
+                        <TripActionsMenu
+                            open={actionsOpen}
+                            onToggle={() => setActionsOpen((value) => !value)}
+                            onClose={() => setActionsOpen(false)}
+                            onEdit={() => {
+                                setActionsOpen(false);
+                                navigate(
+                                    `${ROUTES.newTrip}?tripId=${activeTripId}`,
+                                );
+                            }}
+                            onDelete={() => {
+                                setActionsOpen(false);
+                                if (
+                                    window.confirm(
+                                        `Удалить маршрут «${route.city}»?`,
+                                    )
+                                ) {
+                                    void removeTrip(activeTripId).then(() =>
+                                        navigate(ROUTES.home),
+                                    );
+                                }
+                            }}
+                        />
+                    ) : null}
                 </div>
                 <p className={styles.meta}>
                     <span className={styles.metaItem}>
@@ -188,17 +222,14 @@ export function ReadyRoutePage() {
 
                     {showingAbout ? (
                         guide ? (
-                            <CityGuidePanel
-                                city={route.city}
-                                guide={guide}
-                            />
+                            <CityGuidePanel city={route.city} guide={guide} />
                         ) : (
                             <StatusView
                                 icon={<CompassIcon />}
                                 title="Пока без обзора города"
                                 text="Соберите маршрут ещё раз — подтянем краткую справку о городе."
                                 actionLabel="Новая поездка"
-                                onAction={() => navigate(ROUTES.newTrip)}
+                                onAction={startNewTrip}
                             />
                         )
                     ) : day && day.activities.length > 0 ? (
@@ -273,7 +304,7 @@ export function ReadyRoutePage() {
                             title="В этом дне пока пусто"
                             text="Попробуйте создать поездку заново с другими интересами."
                             actionLabel="Новая поездка"
-                            onAction={() => navigate(ROUTES.newTrip)}
+                            onAction={startNewTrip}
                             secondaryActionLabel="На главную"
                             onSecondaryAction={() => navigate(ROUTES.home)}
                         />
@@ -306,48 +337,5 @@ export function ReadyRoutePage() {
                 </div>
             ) : null}
         </Screen>
-    );
-}
-
-function RemainingBadge({
-    remaining,
-    plannedBudget,
-}: {
-    remaining: number;
-    plannedBudget: number;
-}) {
-    if (plannedBudget <= 0) {
-        return (
-            <span className={styles.badge} title="Бесплатный маршрут">
-                <span className={styles.badgeStack}>
-                    <span className={styles.badgePrefix}>Бюджет</span>
-                    <span className={styles.badgeAmount}>
-                        <span className={styles.badgeValue}>0</span>
-                        <span className={styles.badgeCurrency}>₽</span>
-                    </span>
-                </span>
-            </span>
-        );
-    }
-
-    const overspent = remaining < 0;
-
-    return (
-        <span
-            className={overspent ? styles.badgeWarn : styles.badge}
-            title="Остаток бюджета"
-        >
-            <span className={styles.badgeStack}>
-                <span className={styles.badgePrefix}>
-                    {overspent ? "Перерасход" : "Осталось"}
-                </span>
-                <span className={styles.badgeAmount}>
-                    <span className={styles.badgeValue}>
-                        {formatMoney(Math.abs(remaining))}
-                    </span>
-                    <span className={styles.badgeCurrency}>₽</span>
-                </span>
-            </span>
-        </span>
     );
 }

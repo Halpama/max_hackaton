@@ -11,9 +11,10 @@ import type {
 export type LoadState = "idle" | "loading" | "ready" | "error";
 
 export interface TripPlannerContextValue {
-    /** Wizard form state, kept client-side until the trip is submitted. */
+    /** Wizard form state — only for create / edit-params screens. */
     draft: TripDraft;
     updateDraft: (patch: Partial<TripDraft>) => void;
+    replaceDraft: (draft: TripDraft) => void;
     toggleInterest: (id: InterestId) => void;
     setPace: (pace: TripPace) => void;
     setAdults: (value: number) => void;
@@ -22,6 +23,8 @@ export interface TripPlannerContextValue {
 
     /** Trip currently open on /route and /places/:id. */
     activeTripId: string | null;
+    /** Server params of the open trip (budget etc.) — not the wizard form. */
+    activeTripDraft: TripDraft | null;
     route: RoutePlan | null;
     routeState: LoadState;
     routeError: string | null;

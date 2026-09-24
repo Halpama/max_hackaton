@@ -16,7 +16,7 @@ import styles from '@/features/trip-planner/ui/shared/screens.module.css'
 export function RouteLoadingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { adoptRoute, refreshTrips } = useTripPlanner()
+  const { adoptRoute, refreshTrips, resetDraft } = useTripPlanner()
 
   const tripId = searchParams.get('tripId')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -80,13 +80,14 @@ export function RouteLoadingPage() {
 
   const handleRetry = useCallback(() => {
     if (!tripId) {
+      resetDraft()
       navigate(ROUTES.newTrip)
       return
     }
     setError(null)
     setActiveIndex(0)
     setAttempt((prev) => prev + 1)
-  }, [navigate, tripId])
+  }, [navigate, resetDraft, tripId])
 
   // Landing here without a trip id means the wizard was skipped or the link is stale.
   const message = !USE_MOCKS && !tripId ? 'Поездка не найдена. Начните заново.' : error
