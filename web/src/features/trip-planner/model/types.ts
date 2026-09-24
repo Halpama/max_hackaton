@@ -30,6 +30,8 @@ export interface TripDraft {
     findHousing: boolean;
 }
 
+export type TripEditDraft = Omit<TripDraft, "destination">;
+
 export type TransitMode = "walk" | "taxi" | "metro";
 
 export interface TransitLeg {

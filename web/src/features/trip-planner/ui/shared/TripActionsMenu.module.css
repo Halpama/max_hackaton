@@ -1,0 +1,102 @@
+.root {
+    position: relative;
+    z-index: 40;
+}
+
+.trigger {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 12px;
+    color: var(--tp-primary-deep);
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    cursor: pointer;
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease;
+}
+
+.trigger:active {
+    transform: scale(0.94);
+}
+
+.menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    z-index: 50;
+    display: flex;
+    width: max-content;
+    min-width: 194px;
+    flex-direction: column;
+    padding: 6px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px) scale(0.97);
+    transform-origin: top right;
+    transition:
+        opacity 0.18s ease,
+        transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    /* Opaque panel so tabs/content never show through the rounded corners. */
+    isolation: isolate;
+    background-clip: padding-box;
+}
+
+.root[data-align="end"] .menu {
+    right: 0;
+}
+
+.root[data-align="start"] .menu {
+    left: 0;
+    transform-origin: top left;
+}
+
+.menuOpen {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    margin: 0;
+    padding: 10px 11px;
+    border: 0;
+    border-radius: 9px;
+    color: #25314d;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.item:hover {
+    background: #f3f6fb;
+}
+
+.item:active {
+    background: #e8eef7;
+}
+
+.delete {
+    color: #c2413b;
+}
+
+.delete:hover {
+    background: #fdf2f1;
+}
