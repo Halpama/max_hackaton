@@ -391,7 +391,6 @@ export function ToshaOnboarding() {
 
     useLayoutEffect(() => {
         if (!activeTour || !step) return;
-        setPoseReady(false);
 
         const preferBubble =
             step.bubble === "above" || step.bubble === "below"
@@ -477,6 +476,29 @@ export function ToshaOnboarding() {
             bubble: "center" as const,
         };
     }, [step, onStepPage]);
+
+    // Fade the mascot in only when the pose asset changes — not on panel
+    // resize (that used to flip poseReady off while cached onLoad never re-fired).
+    useLayoutEffect(() => {
+        if (!display?.pose) {
+            setPoseReady(false);
+            return;
+        }
+        setPoseReady(false);
+        const src = TOSHA_POSES[display.pose];
+        const probe = new Image();
+        let cancelled = false;
+        const mark = () => {
+            if (!cancelled) setPoseReady(true);
+        };
+        probe.onload = mark;
+        probe.onerror = mark;
+        probe.src = src;
+        if (probe.complete) mark();
+        return () => {
+            cancelled = true;
+        };
+    }, [display?.pose]);
 
     useLayoutEffect(() => {
         const node = panelRef.current;
