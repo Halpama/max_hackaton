@@ -214,6 +214,7 @@ async def get_trip_edit_draft(trip: OwnedTrip) -> TripEditDraft:
 @router.patch(
     "/{trip_id}",
     response_model=TripCreated,
+    status_code=status.HTTP_202_ACCEPTED,
     summary="Изменить параметры поездки",
     description=(
         "Сохраняет новые параметры без изменения города, очищает старый маршрут "
@@ -231,9 +232,6 @@ async def update_trip(
     session: DbSession,
 ) -> TripCreated:
     """Replace editable parameters and regenerate the existing trip."""
-    if trip.status in {"pending", "running"}:
-        raise ConflictError("Нельзя изменить поездку во время генерации")
-
     draft = TripDraft(
         destination=trip.destination,
         **parameters.model_dump(),
@@ -264,7 +262,7 @@ async def update_trip(
         )
     )
     if result.rowcount != 1:
-        raise ConflictError("Поездка уже начала генерироваться")
+        raise ConflictError("Нельзя изменить поездку во время генерации")
     await session.commit()
     await record_event(
         "trip_updated",

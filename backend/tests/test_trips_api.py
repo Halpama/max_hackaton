@@ -43,6 +43,20 @@ async def test_create_and_fetch_trip(client: AsyncClient):
     assert trip["draft"]["startTime"] == "10:00"
 
 
+EDIT_PAYLOAD = {
+    "startDate": "2026-10-01",
+    "startTime": "11:00",
+    "endDate": "2026-10-04",
+    "endTime": "19:00",
+    "budget": 60000,
+    "adults": 1,
+    "children": 1,
+    "interests": ["walks"],
+    "pace": "calm",
+    "findHousing": True,
+}
+
+
 @respx.mock
 async def test_edit_trip_parameters_keeps_city_and_regenerates(client: AsyncClient):
     mock_external_apis(respx.mock)
@@ -58,18 +72,7 @@ async def test_edit_trip_parameters_keeps_city_and_regenerates(client: AsyncClie
 
     updated = await client.patch(
         f"/api/v1/trips/{trip_id}",
-        json={
-            "startDate": "2026-10-01",
-            "startTime": "11:00",
-            "endDate": "2026-10-04",
-            "endTime": "19:00",
-            "budget": 60000,
-            "adults": 1,
-            "children": 1,
-            "interests": ["walks"],
-            "pace": "calm",
-            "findHousing": True,
-        },
+        json=EDIT_PAYLOAD,
     )
     assert updated.status_code == 202
     assert updated.json() == {"id": trip_id, "status": "pending"}
@@ -82,6 +85,26 @@ async def test_edit_trip_parameters_keeps_city_and_regenerates(client: AsyncClie
     assert trip["draft"]["adults"] == 1
     assert trip["draft"]["children"] == 1
     assert trip["draft"]["findHousing"] is True
+
+
+@respx.mock
+async def test_edit_trip_conflicts_while_generation_in_flight(
+    client: AsyncClient, monkeypatch
+):
+    mock_external_apis(respx.mock)
+    # Leave the freshly created trip parked in "pending" so the guarded
+    # UPDATE sees an in-flight generation.
+    monkeypatch.setattr("app.api.v1.trips._spawn", lambda *args, **kwargs: True)
+
+    created = await client.post("/api/v1/trips", json=SAMPLE_DRAFT)
+    assert created.status_code == 202
+    trip_id = created.json()["id"]
+
+    updated = await client.patch(f"/api/v1/trips/{trip_id}", json=EDIT_PAYLOAD)
+    assert updated.status_code == 409
+    body = updated.json()
+    assert body["code"] == "conflict"
+    assert body["message"] == "Нельзя изменить поездку во время генерации"
 
 
 @respx.mock

@@ -29,6 +29,23 @@ async def test_trip_post_limited(client: AsyncClient, rate_limit_on, monkeypatch
     assert blocked.headers.get("Retry-After") == str(settings.rate_limit_window_seconds)
 
 
+async def test_trip_patch_limited(client: AsyncClient, rate_limit_on, monkeypatch):
+    """PATCH regenerates too, so it must share the strict trip budget."""
+    monkeypatch.setattr(settings, "rate_limit_trip_max", 1)
+    monkeypatch.setattr("app.api.v1.trips._spawn", lambda *args, **kwargs: True)
+
+    created = await client.post("/api/v1/trips", json=SAMPLE_DRAFT)
+    assert created.status_code == 202
+    trip_id = created.json()["id"]
+
+    # The POST spent the whole window budget; the regeneration is throttled
+    # before it can reach the route handler (429, not 409/202).
+    edit_payload = {k: v for k, v in SAMPLE_DRAFT.items() if k != "destination"}
+    blocked = await client.patch(f"/api/v1/trips/{trip_id}", json=edit_payload)
+    assert blocked.status_code == 429
+    assert blocked.json()["code"] == "rate_limited"
+
+
 async def test_global_budget_applies_to_ordinary_endpoints(
     client: AsyncClient, rate_limit_on, monkeypatch
 ):
