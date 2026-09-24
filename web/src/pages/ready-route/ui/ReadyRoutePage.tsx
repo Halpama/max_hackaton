@@ -105,6 +105,11 @@ export function ReadyRoutePage() {
             );
     }, [day, route]);
 
+    const dayLegModes = useMemo(
+        () => (day?.transits ?? []).map((leg) => leg?.mode),
+        [day],
+    );
+
     const dayTabItems = useMemo(() => {
         if (!route) return [];
         return [
@@ -240,9 +245,7 @@ export function ReadyRoutePage() {
                             >
                                 <DayRouteMap
                                     places={dayPlaces}
-                                    legModes={(day.transits ?? []).map(
-                                        (leg) => leg?.mode,
-                                    )}
+                                    legModes={dayLegModes}
                                 />
                             </div>
 

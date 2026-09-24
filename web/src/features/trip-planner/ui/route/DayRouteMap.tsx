@@ -176,6 +176,7 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
   const legModesRef = useRef(legModes)
   const routeAbortRef = useRef<AbortController | null>(null)
   const routeAnimRef = useRef(0)
+  const renderedKeyRef = useRef('')
   const [status, setStatus] = useState<MapStatus>('loading')
 
   useEffect(() => {
@@ -275,6 +276,14 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
         coords.map((c) => c.join(',')).join('|'),
         modes.map((mode) => mode ?? '').join('|'),
       ].join('::')
+
+      // Same day geometry — keep markers/route; don't re-fetch or re-animate.
+      if (renderedKeyRef.current === requestKey && markersRef.current.length === dayPlaces.length) {
+        forceMapLayout(map)
+        redrawPath()
+        return
+      }
+      renderedKeyRef.current = requestKey
 
       markersRef.current.forEach((marker) => marker.remove())
       markersRef.current = dayPlaces.map((place, index) =>
@@ -406,6 +415,7 @@ export function DayRouteMap({ places, legModes = [] }: DayRouteMapProps) {
       mapRef.current?.remove()
       mapRef.current = null
       routeCoordsRef.current = []
+      renderedKeyRef.current = ''
     }
   }, [])
 
