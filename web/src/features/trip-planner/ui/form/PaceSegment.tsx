@@ -1,5 +1,5 @@
-import type { TripPace } from '../model'
-import { PACE_OPTIONS } from '../model'
+import type { TripPace } from '../../model'
+import { PACE_OPTIONS } from '../../model'
 import styles from './PaceSegment.module.css'
 
 interface PaceSegmentProps {

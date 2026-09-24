@@ -9,7 +9,7 @@ import {
   type MaplibreMarker,
 } from '@/shared/lib/maplibre'
 import { fetchRoadRoute, type LngLat, type TransitModeLike } from '@/shared/lib/osrm'
-import type { Place } from '../model'
+import type { Place } from '../../model'
 import styles from './DayRouteMap.module.css'
 
 interface DayRouteMapProps {

@@ -49,7 +49,7 @@ export function yandexGoRouteUrl(from: LngLat, to: LngLat) {
     'start-lon': String(startLon),
     'end-lat': String(endLat),
     'end-lon': String(endLon),
-    ref: 'tripplanner',
+    ref: '2rist',
     // Prefer Go website over store when app is missing (better for WebApp demos)
     appmetrica_tracking_id: '25395763362139037',
   })

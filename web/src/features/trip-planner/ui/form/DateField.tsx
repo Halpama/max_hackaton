@@ -1,6 +1,6 @@
 import { useRef } from 'react'
-import { formatShortDate } from '../lib/format'
-import { CalendarIcon } from './icons'
+import { formatShortDate } from '../../lib/format'
+import { CalendarIcon } from '../shared/icons'
 import styles from './DateField.module.css'
 
 interface DateFieldProps {

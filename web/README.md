@@ -1,32 +1,83 @@
-# React + TypeScript + Vite
+# 2РИСТ — WebApp (MAX)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Мини-приложение Trip Planner для мессенджера MAX: создание поездки, live-генерация маршрута по SSE, карта дня, гид по городу, packing и бюджет.
 
-Currently, two official plugins are available:
+## Стек
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19 + TypeScript + Vite
+- React Router
+- `@maxhub/max-ui` + MAX WebApp bridge
+- MapLibre (тайлы Yandex или OSM)
+- Oxlint / Vitest
 
-## React Compiler
+## Быстрый старт
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+cd web
+cp .env.example .env   # если есть
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Сборка: `npm run build`  
+Тесты: `npm test`  
+Линт: `npm run lint`
+
+Локально API обычно на `VITE_API_BASE_URL` (см. `src/shared/config/env.ts`). Для UI без бэка есть `VITE_USE_MOCKS`.
+
+## Структура `src/`
+
+```
+src/
+  app/           # App, router, providers (MAX bridge), global styles
+  pages/         # экраны маршрутов (thin): home, new-trip, preferences,
+                 # route-loading, ready-route, location-detail, not-found
+  features/
+    trip-planner/
+      api/       # trips, places, SSE stream
+      model/     # TripPlannerProvider, types, local packing/budget state
+      lib/       # format, cityImage, openingHours
+      ui/        # UI по доменам (см. ниже)
+  shared/        # config, hooks, api helpers, maplibre/yandex, ui primitives
+```
+
+Это FSD-lite: страницы тонкие, бизнес-логика и UI поездки живут в `features/trip-planner`.
+
+### `features/trip-planner/ui`
+
+| Папка | Что внутри |
+| --- | --- |
+| `shared/` | Screen, SoftImage, form controls, icons, StatusView |
+| `home/` | HomeTabs, home.module.css |
+| `form/` | City/Date/Time fields, InterestChips, PaceSegment, Stepper |
+| `loading/` | LoadingOrb, ProgressSteps |
+| `route/` | DayTabs, DayRouteMap, CityGuide, ActivityCard, Packing/Budget |
+| `place/` | PlaceDetails |
+| `nav/` | BottomNav + helpers deep-link |
+
+Импортируйте публичное API так:
+
+```ts
+import { Screen, useTripPlanner, DayRouteMap } from '@/features/trip-planner'
+```
+
+CSS-модули при необходимости:
+
+```ts
+import styles from '@/features/trip-planner/ui/home/home.module.css'
+```
+
+## Основные экраны
+
+1. **Home** — мои поездки / избранное  
+2. **New trip** — город, даты, бюджет, состав  
+3. **Preferences** — интересы и темп → старт генерации  
+4. **Route loading** — SSE-стадии пайплайна  
+5. **Ready route** — «О поездке», дни, карта, packing, budget  
+6. **Location detail** — карточка места  
+
+## Конфиг
+
+См. `src/shared/config/` — `ROUTES`, env (`VITE_API_BASE_URL`, `VITE_USE_MOCKS`, ключ тайлов Яндекса на этапе сборки).
+
+Полный стенд (web + api + postgres + redis + searxng): корневой `./trip` / README репозитория.

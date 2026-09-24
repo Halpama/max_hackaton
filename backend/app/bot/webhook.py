@@ -13,7 +13,7 @@ router = APIRouter(prefix="/bot", tags=["bot"])
 
 
 class InviteRequest(BaseModel):
-    """Dev helper: push a planner invite to a known MAX user / chat."""
+    """Ops helper: push a planner invite to a known MAX user / chat."""
 
     user_id: int | None = Field(default=None, alias="userId")
     chat_id: int | None = Field(default=None, alias="chatId")
@@ -68,12 +68,24 @@ async def bot_status() -> dict[str, object]:
 
 
 @router.post("/invite")
-async def bot_invite(body: InviteRequest) -> dict[str, object]:
-    """Send the /start keyboard to a user. Useful to verify open_app without chat."""
+async def bot_invite(
+    body: InviteRequest,
+    x_max_bot_api_secret: str | None = Header(default=None),
+) -> dict[str, object]:
+    """Send the start keyboard to a user.
+
+    Development: open when the bot is enabled.
+    Production: requires `X-Max-Bot-Api-Secret` matching `MAX_BOT_WEBHOOK_SECRET`
+    so random clients cannot spam invites through the public API.
+    """
     if not settings.max_bot_enabled:
         raise ConfigurationError("MAX bot is disabled (MAX_BOT_ENABLED=false)")
     if body.user_id is None and body.chat_id is None:
         raise ConfigurationError("userId or chatId is required")
+    if settings.app_env == "production":
+        secret = settings.max_bot_webhook_secret
+        if not secret or x_max_bot_api_secret != secret:
+            raise UnauthorizedError("Invite requires a valid bot secret in production")
 
     text = body.text or WELCOME
     result = await max_bot.send_planner_invite(

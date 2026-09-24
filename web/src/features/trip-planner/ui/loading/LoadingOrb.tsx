@@ -1,4 +1,4 @@
-import { SparklesIcon } from './icons'
+import { SparklesIcon } from '../shared/icons'
 import styles from './LoadingOrb.module.css'
 
 export function LoadingOrb() {

@@ -13,7 +13,7 @@ import {
   MapIcon,
   PlusIcon,
   RubleIcon,
-} from './icons'
+} from '../shared/icons'
 import styles from './BottomNav.module.css'
 
 type NavContext = 'home' | 'trip'

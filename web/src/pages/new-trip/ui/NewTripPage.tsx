@@ -17,7 +17,7 @@ import {
     useTripPlanner,
     DEFAULT_TRIP_DURATION_DAYS,
 } from "@/features/trip-planner";
-import tripStyles from "@/features/trip-planner/ui/trip.module.css";
+import tripStyles from "@/features/trip-planner/ui/shared/trip.module.css";
 
 export function NewTripPage() {
     const navigate = useNavigate();

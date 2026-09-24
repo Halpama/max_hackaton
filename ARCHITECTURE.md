@@ -1,4 +1,4 @@
-# Архитектура Trip Planner
+# Архитектура 2РИСТ
 
 Мини-приложение для MAX: пользователь задаёт город, даты и интересы → бэкенд
 собирает маршрут по дням и стримит прогресс по SSE → фронт показывает план,
@@ -377,7 +377,7 @@ GET/POST/DELETE /api/v1/favorites   избранное
 GET/PUT /api/v1/trips/{id}/state     packing + ledger
 GET/POST/DELETE …/ledger            учёт трат
 GET    /api/v1/bot/status            статус MAX-бота
-POST   /api/v1/bot/invite            клавиатура-инвайт пользователю
+POST   /api/v1/bot/invite            клавиатура-инвайт (в production — secret)
 POST   /api/v1/bot/webhook           webhook MAX
 ```
 

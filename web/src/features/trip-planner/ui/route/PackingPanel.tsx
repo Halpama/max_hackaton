@@ -3,8 +3,8 @@ import {
   useRef,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
-import type { PackingBlock } from '../model/useTripLocalState'
-import { BulletListIcon, ChecklistIcon, TextBlockIcon } from './icons'
+import type { PackingBlock } from '../../model/useTripLocalState'
+import { BulletListIcon, ChecklistIcon, TextBlockIcon } from '../shared/icons'
 import styles from './PackingPanel.module.css'
 
 interface PackingPanelProps {

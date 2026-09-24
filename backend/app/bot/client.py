@@ -125,11 +125,12 @@ class MaxBotClient:
         return data if isinstance(data, dict) else {}
 
     def planner_keyboard(self) -> list:
-        """Inline keyboard: open mini-app inside MAX + browser fallback.
+        """Inline keyboard: native `open_app` only.
 
-        Per MAX Bot API, `open_app.web_app` is the bot username / bot link — not
-        the SPA URL. The mini-app URL itself is configured in the partner cabinet
-        (Расширенные настройки). `contact_id` is this bot's user_id from /me.
+        The mini-app opens exclusively through the platform `open_app` control
+        (SPA URL is bound in the MAX cabinet, not in the button). Browser /
+        deeplink rows would duplicate that path and are intentionally omitted.
+        Utility callbacks (help / about) stay in chat and do not open the app.
         """
         open_app: dict[str, object] = {
             "type": "open_app",
@@ -141,38 +142,13 @@ class MaxBotClient:
         if self.bot_user_id is not None:
             open_app["contact_id"] = self.bot_user_id
 
-        rows: list[list[dict[str, object]]] = [[open_app]]
-
-        deeplink = self.max_deeplink(startapp=True)
-        if deeplink:
-            rows.append(
-                [
-                    {
-                        "type": "link",
-                        "text": "Открыть в MAX",
-                        "url": deeplink,
-                    }
-                ]
-            )
-
-        if settings.max_webapp_url:
-            rows.append(
-                [
-                    {
-                        "type": "link",
-                        "text": "Открыть в браузере",
-                        "url": settings.max_webapp_url,
-                    }
-                ]
-            )
-
-        rows.append(
+        return [
+            [open_app],
             [
                 {"type": "callback", "text": "Помощь", "payload": "/help"},
                 {"type": "callback", "text": "О боте", "payload": "/about"},
-            ]
-        )
-        return rows
+            ],
+        ]
 
     async def send_planner_invite(
         self, *, chat_id: int | None = None, user_id: int | None = None, text: str

@@ -1,6 +1,6 @@
-import type { Activity, Place } from '../model'
-import { formatPlaceTitle } from '../lib/format'
-import { CategoryBadge } from './CategoryBadge'
+import type { Activity, Place } from '../../model'
+import { formatPlaceTitle } from '../../lib/format'
+import { CategoryBadge } from '../shared/CategoryBadge'
 import styles from './ActivityCard.module.css'
 
 interface ActivityCardProps {

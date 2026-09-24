@@ -56,6 +56,10 @@ async def main() -> int:
     if open_app.get("contact_id") is None and not open_app.get("web_app"):
         print("FAIL: open_app needs contact_id or web_app", file=sys.stderr)
         return 2
+    button_types = [btn["type"] for row in keyboard for btn in row]
+    if "link" in button_types:
+        print("FAIL: keyboard must not duplicate open via link buttons", file=sys.stderr)
+        return 2
 
     if args.invite_user or args.invite_chat:
         result = await max_bot.send_planner_invite(

@@ -1,5 +1,5 @@
-import type { InterestId } from '../model'
-import { INTEREST_OPTIONS } from '../model'
+import type { InterestId } from '../../model'
+import { INTEREST_OPTIONS } from '../../model'
 import styles from './InterestChips.module.css'
 
 interface InterestChipsProps {
