@@ -56,7 +56,7 @@ export function NewTripPage() {
 
             <Section
                 label="Даты"
-                hint={`Приезд — не раньше текущей даты. Выезд по умолчанию через ${DEFAULT_TRIP_DURATION_DAYS} дня; короче минимальной длительности поставить нельзя.`}
+                hint={`Приезд — не раньше текущей даты. Выезд по умолчанию через ${DEFAULT_TRIP_DURATION_DAYS} дня.`}
             >
                 <div className={tripStyles.datesStack}>
                     <div className={tripStyles.dateTimeRow}>
