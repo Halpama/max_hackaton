@@ -30,8 +30,7 @@ class CamelModel(BaseModel):
     )
 
 
-class TripDraft(CamelModel):
-    destination: str = Field(min_length=1, max_length=256)
+class TripParameters(CamelModel):
     start_date: str
     start_time: str
     end_date: str
@@ -51,7 +50,7 @@ class TripDraft(CamelModel):
         return value
 
     @model_validator(mode="after")
-    def _valid_party_size(self) -> "TripDraft":
+    def _valid_party_size(self) -> "TripParameters":
         if self.adults + self.children > 10:
             raise ValueError("the total number of travelers must not exceed 10")
         return self
@@ -75,6 +74,14 @@ class TripDraft(CamelModel):
         if not (0 <= int(hours) <= 23 and 0 <= int(minutes) <= 59):
             raise ValueError("time out of range")
         return f"{int(hours):02d}:{int(minutes):02d}"
+
+
+class TripDraft(TripParameters):
+    destination: str = Field(min_length=1, max_length=256)
+
+
+class TripEditDraft(TripParameters):
+    """Editable trip fields; destination stays server-owned."""
 
 
 class Place(CamelModel):

@@ -261,11 +261,11 @@ flowchart TB
 | Страница | Модуль | Роль |
 | -------- | ------ | ---- |
 | `/` | `pages/home` | список поездок + избранное |
-| `/trips/new` | `pages/new-trip` | черновик: город, даты (≥ сегодня), бюджет |
+| `/trips/new` | `pages/new-trip` | новая поездка (город…) или `?tripId=` — правка параметров без города (даты, бюджет, состав, интересы, темп) |
 | `/preferences` | `pages/preferences` | интересы, темп → `POST /trips` |
 | `/loading` | `pages/route-loading` | SSE-прогресс; при ошибке — retry **или** на главную |
-| `/route?tripId=&day=` | `pages/ready-route` | дни, карта, сборы, бюджет; день в query |
-| `/places/:id` | `pages/location-detail` | карточка; «На карте» → пин по координатам |
+| `/route?tripId=&day=` | `pages/ready-route` | дни, карта, сборы, бюджет; меню ⋮ (правка / удаление) |
+| `/places/:id` | `pages/location-detail` | карточка; нижний крестик → назад к маршруту |
 
 ### Внутри `features/trip-planner`
 
@@ -276,9 +276,11 @@ flowchart TB
 | `ui/` | `DayTabs`, `CityField`, `PlaceDetails`, `StatusView`… | переиспользуемые виджеты |
 | `lib/` | `openingHours`, `cityImage`, `format` | чистые хелперы без React |
 
-При открытии поездки `openTrip` подтягивает `draft` с сервера — UI бюджета
-совпадает с тем, что реально генерировали. Активный день живёт в `?day=`, чтобы
-выход из карточки места не сбрасывал на «День 1».
+При открытии поездки `openTrip` подтягивает `activeTripDraft` с сервера — UI
+бюджета совпадает с тем, что реально генерировали. Wizard-`draft` при этом не
+трогается: после успешной генерации форма сбрасывается, чтобы «Новая поездка»
+начиналась с чистых полей. Активный день живёт в `?day=`, чтобы выход из карточки
+места не сбрасывал на «День 1».
 
 Deeplink’и: `shared/lib/yandex` — точка на карте (`ll`/`pt`), маршрут пешком/метро,
 Yandex Go с координатами A→B.
@@ -368,6 +370,8 @@ flowchart TB
 POST   /api/v1/trips                 создать задачу генерации
 GET    /api/v1/trips                 список поездок пользователя
 GET    /api/v1/trips/{id}            статус + draft + RoutePlan
+GET    /api/v1/trips/{id}/edit       параметры формы без города
+PATCH  /api/v1/trips/{id}            изменить параметры и пересобрать маршрут
 DELETE /api/v1/trips/{id}            архивировать (soft-hide)
 GET    /api/v1/trips/{id}/stream     SSE: stage | done | error
 POST   /api/v1/trips/{id}/retry      перезапуск

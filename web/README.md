@@ -45,36 +45,53 @@ src/
 
 ### `features/trip-planner/ui`
 
-| Папка | Что внутри |
-| --- | --- |
-| `shared/` | Screen, SoftImage, form controls, icons, StatusView |
-| `home/` | HomeTabs, home.module.css |
-| `form/` | City/Date/Time fields, InterestChips, PaceSegment, Stepper |
-| `loading/` | LoadingOrb, ProgressSteps |
-| `route/` | DayTabs, DayRouteMap, CityGuide, ActivityCard, Packing/Budget |
-| `place/` | PlaceDetails |
-| `nav/` | BottomNav + helpers deep-link |
+| Папка      | Что внутри                                                           |
+| ---------- | -------------------------------------------------------------------- |
+| `shared/`  | Screen, SoftImage, form controls, icons, StatusView, TripActionsMenu |
+| `home/`    | HomeTabs, home.module.css                                            |
+| `form/`    | City/Date/Time fields, InterestChips, PaceSegment, Stepper           |
+| `loading/` | LoadingOrb, ProgressSteps                                            |
+| `route/`   | DayTabs, DayRouteMap, CityGuide, ActivityCard, Packing/Budget        |
+| `place/`   | PlaceDetails                                                         |
+| `nav/`     | BottomNav + helpers deep-link                                        |
 
 Импортируйте публичное API так:
 
 ```ts
-import { Screen, useTripPlanner, DayRouteMap } from '@/features/trip-planner'
+import { Screen, useTripPlanner, DayRouteMap } from "@/features/trip-planner";
 ```
 
 CSS-модули при необходимости:
 
 ```ts
-import styles from '@/features/trip-planner/ui/home/home.module.css'
+import styles from "@/features/trip-planner/ui/home/home.module.css";
 ```
 
 ## Основные экраны
 
-1. **Home** — мои поездки / избранное  
-2. **New trip** — город, даты, бюджет, состав  
-3. **Preferences** — интересы и темп → старт генерации  
-4. **Route loading** — SSE-стадии пайплайна  
-5. **Ready route** — «О поездке», дни, карта, packing, budget  
-6. **Location detail** — карточка места  
+1. **Home** — мои поездки / избранное
+2. **New trip** — город, даты, бюджет, состав
+3. **Preferences** — интересы и темп → старт генерации
+4. **Route loading** — SSE-стадии пайплайна
+5. **Ready route** — «О поездке», дни, карта, packing, budget
+6. **Location detail** — карточка места
+
+### Действия маршрута
+
+Меню `TripActionsMenu` (три точки) — в заголовке готового маршрута и на карточке
+поездки на Home. Долгое нажатие на карточку на touch тоже открывает меню.
+
+- **Изменить параметры** — даты, бюджет, состав, интересы и темп (без города:
+  смена города = новая поездка); затем повторная генерация.
+- **Удалить маршрут** — с подтверждением.
+
+Wizard-форма (`draft`) сбрасывается после успешной генерации и при нажатии
+«Новая поездка»; параметры открытого маршрута живут отдельно в
+`activeTripDraft` (бюджет и т.п.).
+
+На карточке места в нижней панели остаётся крестик «закрыть» → назад к маршруту.
+Изображения через `SoftImage`: skeleton, затем раскрытие сверху вниз. Нижняя
+навигация непрозрачная, под ней лёгкий градиент к фону.
 
 ## Конфиг
 

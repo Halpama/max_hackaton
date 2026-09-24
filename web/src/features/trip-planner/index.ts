@@ -8,6 +8,7 @@ export type {
     TransitLeg,
     TransitMode,
     TripDraft,
+    TripEditDraft,
     TripPace,
     TripStatus,
     TripSummary,

@@ -25,6 +25,9 @@ def limit_for(method: str, path: str) -> int | None:
         return None
     if method == "POST" and path.rstrip("/") == "/api/v1/trips":
         return settings.rate_limit_trip_max
+    # A PATCH regenerates the route just like POST /trips — same quota burn.
+    if method == "PATCH" and path.startswith("/api/v1/trips/"):
+        return settings.rate_limit_trip_max
     if path.startswith("/api/v1/geo"):
         return settings.rate_limit_geo_max
     return settings.rate_limit_max_requests
