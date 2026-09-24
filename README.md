@@ -2,18 +2,36 @@
   <img src="web/public/readme-banner.svg" alt="2РИСТ" width="100%" />
 </p>
 
-# 2РИСТ
+<h1 align="center">2РИСТ</h1>
 
-Мини-приложение и бот для **MAX**: ИИ собирает маршрут поездки по дням — с картой, гидом по городу, сборами и бюджетом.
+<p align="center">
+  Мини-приложение и бот для <b>MAX</b>: ИИ собирает маршрут поездки по дням — с картой,<br/>
+  гидом по городу, сборами и бюджетом.
+</p>
 
-**Стек:** FastAPI · React · Postgres · Redis · SearXNG · GigaChat · KudaGo / OpenTripMap · Open-Meteo
+<p align="center">
+  <img src="https://img.shields.io/badge/pytest-120%20passed-brightgreen?label=backend&color=2f6f4e" alt="Backend tests: 120 passed" />
+  <img src="https://img.shields.io/badge/vitest-35%20passed-brightgreen?label=web&color=2f6f4e" alt="Web tests: 35 passed" />
+  <br/>
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
+  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/Node-22-5FA04E?logo=nodedotjs&logoColor=white" alt="Node 22" />
+  <br/>
+  <img src="https://img.shields.io/badge/Postgres-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/Docker-compose-blue?logo=docker&logoColor=white" alt="Docker Compose" />
+  <img src="https://img.shields.io/badge/%D0%A1%D1%82%D0%B5%D0%BA-GigaChat%20%C2%B7%20SearXNG%20%C2%B7%20KudaGo-6b57ff" alt="Stack: GigaChat, SearXNG, KudaGo" />
+</p>
 
-| | |
-| --- | --- |
-| Стенд | `./trip up` → [localhost:3000](http://localhost:3000) |
-| API / Swagger | [localhost:8000](http://localhost:8000) · [docs](http://localhost:8000/docs) |
-| Архитектура | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Backend / Web | [backend/README.md](backend/README.md) · [web/README.md](web/README.md) |
+## Содержание
+
+- [Возможности](#возможности)
+- [Быстрый старт](#быстрый-старт)
+  - [MAX-бот](#max-бот)
+- [Поток экранов](#поток-экранов)
+- [Структура](#структура)
+- [Проверка](#проверка)
 
 ## Возможности
 
