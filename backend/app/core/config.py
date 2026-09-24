@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -50,6 +51,9 @@ class Settings(BaseSettings):
     #: and can be switched off if an upstream starts misbehaving mid-demo.
     kudago_enabled: bool = True
     weather_enabled: bool = True
+    environment_model_mode: Literal["off", "shadow", "active"] = "shadow"
+    environment_model_path: str = "ml_data/environment_model.joblib"
+    environment_model_threshold: float = 0.80
 
     max_bot_enabled: bool = False
     max_bot_token: str = ""
@@ -90,6 +94,10 @@ class Settings(BaseSettings):
     @property
     def max_bot_active(self) -> bool:
         return self.max_bot_enabled and self.max_bot_configured
+
+    @property
+    def environment_model_file(self) -> Path:
+        return Path(self.environment_model_path)
 
 
 

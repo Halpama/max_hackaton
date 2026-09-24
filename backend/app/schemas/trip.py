@@ -13,6 +13,7 @@ TripPace = Literal["calm", "medium", "active"]
 InterestId = Literal["sights", "museums", "gastro", "walks", "nature", "unusual"]
 TransitMode = Literal["walk", "taxi", "metro"]
 CategoryKind = Literal["museum", "location", "food", "walk"]
+EnvironmentKind = Literal["indoor", "outdoor", "mixed", "unknown"]
 TripStatus = Literal["pending", "running", "ready", "failed"]
 #: "catalog" means a real popularity signal from KudaGo; "estimate" is our own
 #: projection of OpenTripMap's 1..7 score and must be labelled as such.
@@ -64,6 +65,7 @@ class Place(CamelModel):
     title: str
     category: str
     category_kind: CategoryKind
+    environment_kind: EnvironmentKind = "unknown"
     city: str
     price_label: str
     price_value: float | None = None

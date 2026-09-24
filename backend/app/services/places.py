@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.errors import UpstreamError
 from app.core.logging import get_logger
 from app.schemas.trip import CategoryKind, RatingSource
+from app.services.environment import classify_environment
 
 logger = get_logger(__name__)
 
@@ -106,6 +107,7 @@ class PlaceCandidate:
     source_name: str | None = None
     #: Typical visit length from GigaChat; None → scheduler heuristics.
     stay_minutes: int | None = None
+    environment_kind: str = "unknown"
 
     @property
     def rating(self) -> float:
@@ -312,6 +314,8 @@ def to_candidate(details: dict, city: str, interests: set[str]) -> PlaceCandidat
     if set(kinds) & EXCLUDED_KINDS:
         return None
     category = pick_category(kinds, name)
+    category_kind = pick_category_kind(kinds, name)
+    description = build_description(details, category, city)
 
     return PlaceCandidate(
         xid=str(xid),
@@ -320,12 +324,19 @@ def to_candidate(details: dict, city: str, interests: set[str]) -> PlaceCandidat
         kinds=kinds,
         rate=max(1, parse_rate(details.get("rate"))),
         category=category,
-        category_kind=pick_category_kind(kinds, name),
+        category_kind=category_kind,
         address=build_address(details, city),
-        description=build_description(details, category, city),
+        description=description,
         image_url=build_image_url(details),
         city=city,
         interests=set(interests),
+        environment_kind=classify_environment(
+            title=name,
+            description=description,
+            opening_hours=None,
+            kinds=kinds,
+            category_kind=category_kind,
+        ),
     )
 
 
@@ -419,6 +430,13 @@ def kudago_to_candidate(
     favorites = int(item.get("favorites_count") or 0)
     address = _clean_text(item.get("address") or "") or city
     timetable = _clean_text(item.get("timetable") or "") or None
+    environment_kind = classify_environment(
+        title=title,
+        description=description[:600],
+        opening_hours=timetable,
+        kinds=categories,
+        category_kind=kind,
+    )
 
     return PlaceCandidate(
         xid=f"kudago:{item.get('id')}",
@@ -439,6 +457,7 @@ def kudago_to_candidate(
         opening_hours=timetable,
         source_url=str(item.get("site_url") or "") or None,
         source_name="KudaGo",
+        environment_kind=environment_kind,
     )
 
 
