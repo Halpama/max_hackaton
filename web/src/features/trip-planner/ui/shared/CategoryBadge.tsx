@@ -1,4 +1,4 @@
-import type { Place } from '../model'
+import type { Place } from '../../model'
 import { FoodIcon, LandmarkIcon, MuseumIcon, WalkIcon } from './icons'
 import styles from './CategoryBadge.module.css'
 

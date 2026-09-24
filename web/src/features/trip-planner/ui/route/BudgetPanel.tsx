@@ -6,8 +6,8 @@ import {
   groupLedgerByDate,
   type LedgerEntry,
   type LedgerKind,
-} from '../model/useTripLocalState'
-import { PlusIcon } from './icons'
+} from '../../model/useTripLocalState'
+import { PlusIcon } from '../shared/icons'
 import styles from './BudgetPanel.module.css'
 
 interface BudgetPanelProps {

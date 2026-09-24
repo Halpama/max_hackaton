@@ -133,7 +133,7 @@ async def fetch_wikipedia_city(city: str) -> dict[str, str | None]:
                     url,
                     headers={
                         "Accept": "application/json",
-                        "User-Agent": "TripPlannerMAX/1.0 (hackathon; city-guide)",
+                        "User-Agent": "2RIST/1.0 (hackathon; city-guide)",
                     },
                 )
                 if response.status_code == 404:

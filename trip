@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Trip Planner — jury-friendly launcher (macOS / Linux / Git Bash / WSL).
+# 2РИСТ — jury-friendly launcher (macOS / Linux / Git Bash / WSL).
 # On Windows use trip.cmd instead.
 # Usage: ./trip <command>
 set -euo pipefail
@@ -159,7 +159,7 @@ curl_json() {
 
 cmd_help() {
   cat <<EOF
-${C_BOLD}Trip Planner${C_RESET} — быстрый запуск для жюри и демо
+${C_BOLD}2РИСТ${C_RESET} — быстрый запуск для жюри и демо
 
 ${C_BOLD}Использование${C_RESET}
   ./trip <команда>
@@ -298,7 +298,7 @@ cmd_up() {
   need_docker
   ensure_env
   export_web_build_env
-  hdr "Запуск Trip Planner"
+  hdr "Запуск 2РИСТ"
   if [[ -n "${VITE_YANDEX_MAPS_TILES_KEY:-}" ]]; then
     info "Yandex tiles key: из web/.env (build arg)"
   else

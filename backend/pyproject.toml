@@ -1,7 +1,7 @@
 [project]
 name = "trip-planner-backend"
 version = "0.1.0"
-description = "Trip Planner backend for the MAX mini-app"
+description = "2РИСТ backend for the MAX mini-app"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",

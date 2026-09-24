@@ -10,16 +10,14 @@ import {
   SecondaryButton,
   StatusView,
   WarningIcon,
+  tripRoutePath,
   useTripPlanner,
   type Place,
+  type PlaceNavState,
 } from '@/features/trip-planner'
 import { getPlace } from '@/features/trip-planner/api'
-import {
-  tripRoutePath,
-  type PlaceNavState,
-} from '@/features/trip-planner/ui/BottomNav'
 import { yandexMapsPointUrl } from '@/shared/lib/yandex'
-import tripStyles from '@/features/trip-planner/ui/trip.module.css'
+import tripStyles from '@/features/trip-planner/ui/shared/trip.module.css'
 
 function readNavState(state: unknown): PlaceNavState | null {
   if (!state || typeof state !== 'object') return null

@@ -28,7 +28,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logger.info(
-        "Starting Trip Planner (env=%s, auth=%s, bot=%s/%s)",
+        "Starting 2РИСТ (env=%s, auth=%s, bot=%s/%s)",
         settings.app_env,
         settings.auth_mode,
         "on" if settings.max_bot_enabled else "off",
@@ -45,11 +45,11 @@ async def lifespan(_: FastAPI):
     await stop_bot()
     await close_redis()
     await dispose_engine()
-    logger.info("Trip Planner backend stopped")
+    logger.info("2РИСТ backend stopped")
 
 
 app = FastAPI(
-    title="Trip Planner API",
+    title="2РИСТ API",
     version="0.1.0",
     lifespan=lifespan,
 )

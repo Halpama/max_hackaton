@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '@/shared/api'
 import { USE_MOCKS } from '@/shared/config'
-import { SearchIcon } from './icons'
+import { SearchIcon } from '../shared/icons'
 import styles from './CityField.module.css'
 
 export type CitySuggestion = {

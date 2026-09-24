@@ -107,7 +107,7 @@ class KudaGoClient:
         if self._client is None:
             self._client = httpx.AsyncClient(
                 timeout=httpx.Timeout(12.0, connect=6.0),
-                headers={"User-Agent": "TripPlannerMAX/1.0 (+https://2-rist.ru)"},
+                headers={"User-Agent": "2RIST/1.0 (+https://2-rist.ru)"},
             )
         return self._client
 

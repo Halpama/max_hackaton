@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { Place } from '../model'
-import { formatPlaceTitle } from '../lib/format'
-import { parseOpeningHours } from '../lib/openingHours'
-import { CategoryBadge } from './CategoryBadge'
-import { ChevronDownIcon, StarIcon } from './icons'
-import { SoftImage } from './SoftImage'
+import type { Place } from '../../model'
+import { formatPlaceTitle } from '../../lib/format'
+import { parseOpeningHours } from '../../lib/openingHours'
+import { CategoryBadge } from '../shared/CategoryBadge'
+import { ChevronDownIcon, StarIcon } from '../shared/icons'
+import { SoftImage } from '../shared/SoftImage'
 import styles from './PlaceHero.module.css'
 
 interface PlaceDetailsProps {

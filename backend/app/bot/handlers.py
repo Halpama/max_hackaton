@@ -1,7 +1,8 @@
 """Update handlers for the MAX trip-planner bot.
 
-The bot is the entry point into the mini-app: welcome, help, and a one-tap
-`open_app` button. Heavy UX lives in the SPA — the chat stays short on purpose.
+The bot stays short on purpose: welcome / help / about in chat, and the
+mini-app opens only via the native `open_app` control from the client cabinet.
+Heavy UX lives in the SPA.
 """
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 WELCOME = (
-    "Привет! Я **Trip Planner** — соберу маршрут поездки по дням.\n\n"
+    "Привет! Я **2РИСТ** — соберу маршрут поездки по дням.\n\n"
     "Укажи город, даты и интересы в мини-приложении — "
     "ИИ подберёт места, время в пути и бюджет."
 )
@@ -23,14 +24,14 @@ HELP = (
     "• Учесть интересы, темп и бюджет\n"
     "• Показать погоду и часы работы мест\n\n"
     "**Команды**\n"
-    "/start — открыть планировщик\n"
+    "/start — приглашение в мини-приложение\n"
     "/help — эта справка\n"
     "/about — про проект\n\n"
-    "Нажми кнопку ниже или напиши город в мини-приложении."
+    "Открой мини-приложение кнопкой ниже — там город, даты и интересы."
 )
 
 ABOUT = (
-    "**Trip Planner** — мини-приложение для хакатона MAX.\n"
+    "**2РИСТ** — мини-приложение для хакатона MAX.\n"
     "Стек: FastAPI · Postgres · Redis · GigaChat · KudaGo · OpenTripMap.\n\n"
     f"Веб-версия: {settings.max_webapp_url}"
 )
@@ -173,7 +174,7 @@ async def handle_update(update: dict) -> None:
                 await _reply(
                     update,
                     "Маршрут собирается в мини-приложении — там удобнее указать "
-                    "город, даты и интересы.\n\nНажми кнопку ниже 👇",
+                    "город, даты и интересы.\n\nОткрой его кнопкой ниже 👇",
                 )
             return
 

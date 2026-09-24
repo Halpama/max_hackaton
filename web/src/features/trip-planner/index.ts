@@ -24,6 +24,8 @@ export {
     MOCK_TRIPS,
     PACE_OPTIONS,
     TripPlannerProvider,
+    formatMoney,
+    useTripLocalState,
     useTripPlanner,
 } from "./model";
 export * from "./ui";
