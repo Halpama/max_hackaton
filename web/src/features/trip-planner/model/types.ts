@@ -42,11 +42,15 @@ export interface TransitLeg {
 /** Whether the rating is a real catalogue signal or our own projection. */
 export type RatingSource = "catalog" | "estimate";
 
+/** Where a place is: indoors, outdoors, both, or not yet classified. */
+export type EnvironmentKind = 'indoor' | 'outdoor' | 'mixed' | 'unknown'
+
 export interface Place {
     id: string;
     title: string;
     category: string;
     categoryKind: "museum" | "location" | "food" | "walk";
+    environmentKind?: EnvironmentKind
     city: string;
     priceLabel: string;
     priceValue?: number;

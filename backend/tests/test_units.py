@@ -293,3 +293,63 @@ def test_city_suggest_skips_village_namesakes():
     assert is_trip_city(real_kazan)
     assert not is_trip_city(village)
     assert not is_trip_city(namesake)
+
+
+def test_environment_rules_cover_common_kinds() -> None:
+    from app.services.environment import classify_by_rules
+
+    assert classify_by_rules("Третьяковская галерея", ["museums"], "museum") == "indoor"
+    assert classify_by_rules("Летний сад", ["gardens_and_parks"], "walk") == "outdoor"
+    assert classify_by_rules("Казанский кремль", ["fortifications"], "location") == "mixed"
+    assert classify_by_rules("Кофейня на углу", [], "food") == "indoor"
+    assert classify_by_rules("Что-то невиданное", ["weird-kind"], "location") == "unknown"
+
+
+def test_environment_kinds_signature_is_stable() -> None:
+    from app.services.environment import kinds_signature
+
+    # order-independent, noise slugs dropped — train/inference must agree
+    assert kinds_signature(["park", "museums", "sights"]) == "museums|park"
+    assert kinds_signature(["museums", "park", "attractions"]) == "museums|park"
+    assert kinds_signature([]) == ""
+
+
+def test_environment_classifier_respects_mode(monkeypatch) -> None:
+    from app.core.config import settings
+    from app.services import environment
+
+    monkeypatch.setattr(settings, "environment_model_mode", "off")
+    label, score = environment.classify_environment_with_score(
+        title="Эрмитаж", description="", opening_hours=None,
+        kinds=["museums"], category_kind="museum",
+    )
+    assert (label, score) == ("indoor", 1.0)
+
+
+def test_environment_model_override_in_active_mode(tmp_path, monkeypatch) -> None:
+    """A tiny fake pipeline artifact must be able to override weak rules."""
+    from app.core.config import settings
+    from app.services import environment
+
+    class FakePipeline:
+        classes_ = ("indoor", "mixed", "outdoor")
+
+        def predict_proba(self, X):
+            # always say "outdoor" with high confidence (numpy, like sklearn)
+            import numpy as np
+
+            return np.tile([0.05, 0.05, 0.9], (len(X), 1))
+
+    monkeypatch.setattr(settings, "environment_model_mode", "active")
+    monkeypatch.setattr(settings, "environment_model_path", str(tmp_path / "model.joblib"))
+    monkeypatch.setattr(environment._load_artifact, "cache_clear", lambda: None)
+    monkeypatch.setattr(
+        environment, "_get_predictor",
+        lambda: environment._Predictor({"pipeline": FakePipeline()}, tmp_path / "model.joblib"),
+    )
+    label, score = environment.classify_environment_with_score(
+        title="Странное место", description="", opening_hours=None,
+        kinds=["other"], category_kind="unknown",
+    )
+    assert label == "outdoor"
+    assert score >= settings.environment_model_threshold
