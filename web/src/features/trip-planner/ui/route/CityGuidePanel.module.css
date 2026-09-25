@@ -189,10 +189,15 @@
 .source a {
   color: var(--tp-primary-deep);
   text-decoration: none;
+  transition: opacity 0.15s ease;
 }
 
 .source a:hover {
   text-decoration: underline;
+}
+
+.source a:active {
+  opacity: 0.6;
 }
 
 @keyframes rise {

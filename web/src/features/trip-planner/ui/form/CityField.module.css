@@ -72,10 +72,16 @@
   cursor: pointer;
   color: var(--tp-text);
   font: inherit;
+  transition: background 0.15s ease;
 }
 
 .optionActive {
   background: var(--tp-primary-soft);
+}
+
+.option:active,
+.optionActive:active {
+  background: rgba(0, 122, 255, 0.2);
 }
 
 .optionName {

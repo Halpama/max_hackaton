@@ -36,6 +36,11 @@
   transform: translateY(-0.5px);
 }
 
+.tab:active,
+.tabActive:active {
+  transform: scale(0.97);
+}
+
 .icon {
   display: inline-flex;
   flex-shrink: 0;

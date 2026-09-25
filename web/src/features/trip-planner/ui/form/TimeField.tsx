@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import styles from './TimeField.module.css'
-import { ClockIcon } from '../shared/icons'
+import { ClockIcon } from '../shared/icons-sprite'
 
 interface TimeFieldProps {
   label: string

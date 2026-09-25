@@ -1,4 +1,4 @@
-import { SparklesIcon } from '../shared/icons'
+import { SparklesIcon } from '../shared/icons-sprite'
 import styles from './LoadingOrb.module.css'
 
 export function LoadingOrb() {
@@ -8,7 +8,7 @@ export function LoadingOrb() {
       <span className={styles.ringDelayed} />
       <span className={styles.sweep} />
       <span className={styles.core}>
-        <SparklesIcon className={styles.icon} width={44} height={44} />
+        <SparklesIcon />
       </span>
     </div>
   )

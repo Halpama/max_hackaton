@@ -1,4 +1,4 @@
-import { CheckIcon } from '../shared/icons'
+import { CheckIcon } from '../shared/icons-sprite'
 import styles from './ProgressSteps.module.css'
 
 interface ProgressStepsProps {
