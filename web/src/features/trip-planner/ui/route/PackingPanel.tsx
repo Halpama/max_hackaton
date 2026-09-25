@@ -1,11 +1,13 @@
 import {
   useEffect,
   useRef,
+  useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import type { PackingBlock } from '../../model/useTripLocalState'
-import { BulletListIcon, ChecklistIcon, TextBlockIcon } from '../shared/icons'
+import { BulletListIcon, ChecklistIcon, TextBlockIcon } from '../shared/icons-sprite'
 import styles from './PackingPanel.module.css'
+import { useBeforeUnloadSave } from '@/hooks/useBeforeUnloadSave'
 
 interface PackingPanelProps {
   blocks: PackingBlock[]
@@ -61,11 +63,35 @@ export function PackingPanel({ blocks, onChange, createId }: PackingPanelProps) 
     placeCaret(el, caret)
   }, [blocks])
 
+  useBeforeUnloadSave()
+
+  const [optimisticBlocks, setOptimisticBlocks] = useState<PackingBlock[]>(blocks)
+
+  useEffect(() => {
+    setOptimisticBlocks(blocks)
+  }, [blocks])
+
   const commit = (next: PackingBlock[], focusId?: string, caret?: number) => {
     if (focusId) focusIdRef.current = focusId
     if (caret != null) caretRef.current = caret
+    setOptimisticBlocks(next)
     onChange(next)
   }
+
+  // Announce changes to screen readers
+  useEffect(() => {
+    if (optimisticBlocks.length !== blocks.length) {
+      const added = optimisticBlocks.length > blocks.length
+      const message = added ? 'Элемент добавлен в список' : 'Элемент удалён из списка'
+      const liveRegion = document.getElementById('live-region')
+      if (liveRegion) {
+        liveRegion.textContent = message
+        setTimeout(() => {
+          liveRegion.textContent = ''
+        }, 1000)
+      }
+    }
+  }, [optimisticBlocks, blocks])
 
   const updateBlock = (id: string, patch: Partial<PackingBlock> & { type?: BlockType }) => {
     onChange(
@@ -199,99 +225,107 @@ export function PackingPanel({ blocks, onChange, createId }: PackingPanelProps) 
   }
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.topBar}>
-        <p className={styles.hint}>Чеклист вещей и заметки к поездке.</p>
-        <div className={styles.toolbar} role="toolbar" aria-label="Тип блока">
-          <button
-            type="button"
-            className={styles.tool}
-            aria-label="Текст"
-            title="Текст"
-            onClick={() => turnInto('text')}
-          >
-            <TextBlockIcon />
-          </button>
-          <button
-            type="button"
-            className={styles.tool}
-            aria-label="Список"
-            title="Список"
-            onClick={() => turnInto('bullet')}
-          >
-            <BulletListIcon />
-          </button>
-          <button
-            type="button"
-            className={styles.tool}
-            aria-label="Чеклист"
-            title="Чеклист"
-            onClick={() => turnInto('check')}
-          >
-            <ChecklistIcon />
-          </button>
-        </div>
-      </div>
-
-      <div className={styles.editor} onClick={(event) => {
-        if (event.target === event.currentTarget) ensureTail()
-      }}>
-        <div className={styles.page}>
-          {blocks.map((block) => (
-            <div
-              key={block.id}
-              className={
-                block.type === 'text'
-                  ? styles.blockText
-                  : block.type === 'bullet'
-                    ? styles.blockBullet
-                    : styles.blockCheck
-              }
+    <>
+      <div
+        id="live-region"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      />
+      <div className={styles.wrap}>
+        <div className={styles.topBar}>
+          <p className={styles.hint}>Чеклист вещей и заметки к поездке.</p>
+          <div className={styles.toolbar} role="toolbar" aria-label="Тип блока">
+            <button
+              type="button"
+              className={styles.tool}
+              aria-label="Текст"
+              title="Текст"
+              onClick={() => turnInto('text')}
             >
-              {block.type === 'check' ? (
-                <button
-                  type="button"
-                  className={block.done ? styles.checkOn : styles.check}
-                  tabIndex={-1}
-                  aria-label={block.done ? 'Снять отметку' : 'Отметить'}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => updateBlock(block.id, { done: !block.done })}
-                >
-                  {block.done ? (
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden>
-                      <path
-                        d="M5 12.5l5 5L19 7"
-                        stroke="currentColor"
-                        strokeWidth="2.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ) : null}
-                </button>
-              ) : null}
+              <TextBlockIcon />
+            </button>
+            <button
+              type="button"
+              className={styles.tool}
+              aria-label="Список"
+              title="Список"
+              onClick={() => turnInto('bullet')}
+            >
+              <BulletListIcon />
+            </button>
+            <button
+              type="button"
+              className={styles.tool}
+              aria-label="Чеклист"
+              title="Чеклист"
+              onClick={() => turnInto('check')}
+            >
+              <ChecklistIcon />
+            </button>
+          </div>
+        </div>
 
-              {block.type === 'bullet' ? <span className={styles.bullet} aria-hidden /> : null}
-
-              <EditableLine
-                id={block.id}
-                text={block.text}
-                done={block.type === 'check' ? block.done : false}
-                placeholder={
-                  block.type === 'check'
-                    ? 'Пункт чеклиста'
+        <div className={styles.editor} onClick={(event) => {
+          if (event.target === event.currentTarget) ensureTail()
+        }}>
+          <div className={styles.page}>
+            {optimisticBlocks.map((block) => (
+              <div
+                key={block.id}
+                className={
+                  block.type === 'text'
+                    ? styles.blockText
                     : block.type === 'bullet'
-                      ? 'Пункт списка'
-                      : 'Начните писать…'
-                }
-                onInput={(value) => onTextInput(block, value)}
-                onKeyDown={(event) => onKeyDown(block, event)}
-              />
-            </div>
-          ))}
+                      ? styles.blockBullet
+                      : styles.blockCheck
+                }>
+                {block.type === 'check' ? (
+                  <button
+                    type="button"
+                    className={block.done ? styles.checkOn : styles.check}
+                    tabIndex={-1}
+                    aria-label={block.done ? 'Снять отметку' : 'Отметить'}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => updateBlock(block.id, { done: !block.done })}
+                  >
+                    {block.done ? (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path
+                          d="M5 12.5l5 5L19 7"
+                          stroke="currentColor"
+                          strokeWidth="2.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : null}
+                  </button>
+                ) : null}
+
+                {block.type === 'bullet' ? <span className={styles.bullet} aria-hidden /> : null}
+
+                <EditableLine
+                  id={block.id}
+                  text={block.text}
+                  done={block.type === 'check' ? block.done : false}
+                  placeholder={
+                    block.type === 'check'
+                      ? 'Пункт чеклиста'
+                      : block.type === 'bullet'
+                        ? 'Пункт списка'
+                        : 'Начните писать…'
+                  }
+                  onInput={(value) => onTextInput(block, value)}
+                  onKeyDown={(event) => onKeyDown(block, event)}
+                />
+              </div>
+            ))}
         </div>
       </div>
     </div>
+    </>
   )
 }
 

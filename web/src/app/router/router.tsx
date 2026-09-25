@@ -49,6 +49,13 @@ export const router = createBrowserRouter([
         },
       },
       {
+        path: ROUTES.route,
+        lazy: async () => {
+          const { ReadyRoutePage } = await import('@/pages/ready-route')
+          return { Component: ReadyRoutePage }
+        },
+      },
+      {
         path: '*',
         lazy: async () => {
           const { NotFoundPage } = await import('@/pages/not-found')

@@ -24,3 +24,8 @@
   background: var(--tp-primary);
   color: #fff;
 }
+
+.tab:active,
+.tabActive:active {
+  transform: scale(0.97);
+}

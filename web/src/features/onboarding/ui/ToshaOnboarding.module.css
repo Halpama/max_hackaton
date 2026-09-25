@@ -281,6 +281,14 @@
     font-size: 11px;
     font-weight: 650;
     cursor: pointer;
+    transition:
+        transform 0.15s ease,
+        background 0.15s ease;
+}
+
+.devChipGhost:active {
+    transform: scale(0.96);
+    background: rgba(15, 23, 42, 0.12);
 }
 
 @keyframes panelRise {

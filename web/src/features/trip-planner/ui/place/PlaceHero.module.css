@@ -314,6 +314,11 @@
   font-weight: 700;
   color: var(--tp-primary-deep);
   cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.aboutToggle:active {
+  opacity: 0.7;
 }
 
 .aboutChevron {
@@ -341,6 +346,11 @@
   color: var(--tp-muted);
   text-decoration: underline;
   text-underline-offset: 2px;
+  transition: opacity 0.15s ease;
+}
+
+.source:active {
+  opacity: 0.6;
 }
 
 @media (prefers-reduced-motion: reduce) {
