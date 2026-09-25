@@ -8,7 +8,7 @@ export function LoadingOrb() {
       <span className={styles.ringDelayed} />
       <span className={styles.sweep} />
       <span className={styles.core}>
-        <SparklesIcon />
+        <SparklesIcon className={styles.icon} width={44} height={44} />
       </span>
     </div>
   )
