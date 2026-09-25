@@ -41,6 +41,7 @@ from app.services.scheduler import (
     allocate_stays,
     build_day_slots,
     distribute,
+    prefer_indoor_when_wet,
 )
 
 logger = get_logger(__name__)
@@ -317,7 +318,21 @@ async def build_route(
 
     # 3. Расчёт времени в пути
     await stage_start("transit")
+    # Forecast first so wet-day indoor preference can reshape each day before
+    # transit legs are computed against a frozen order.
+    forecast = await _day_forecast(lat=lat, lon=lon, slots=slots)
     grouped = distribute(selected, slots, draft.pace)
+    for day_index, slot in enumerate(slots):
+        if day_index >= len(grouped):
+            break
+        day_weather = forecast.get(slot.start.date().isoformat())
+        if day_weather is None:
+            continue
+        grouped[day_index] = prefer_indoor_when_wet(
+            grouped[day_index],
+            weather_icon=day_weather.icon,
+            precipitation_chance=day_weather.precipitation_chance,
+        )
     metro = transit.has_metro(city)
     day_transits: list[list[TransitLeg | None]] = []
     day_transit_minutes: list[list[int]] = []
@@ -355,16 +370,13 @@ async def build_route(
 
     # 5. Формирование расписания
     await stage_start("schedule")
-    forecast, guide = await asyncio.gather(
-        _day_forecast(lat=lat, lon=lon, slots=slots),
-        _build_city_guide_safe(
-            city,
-            start_at.date(),
-            lat=lat,
-            lon=lon,
-            digest=city_digest,
-            hints=discovery_hints,
-        ),
+    guide = await _build_city_guide_safe(
+        city,
+        start_at.date(),
+        lat=lat,
+        lon=lon,
+        digest=city_digest,
+        hints=discovery_hints,
     )
     places: dict[str, Place] = {}
     days: list[DayPlan] = []
