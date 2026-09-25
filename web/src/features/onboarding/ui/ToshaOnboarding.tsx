@@ -263,26 +263,44 @@ export function ToshaOnboarding() {
     const skipAll = query.mode === "skip";
 
     const [forcedTour, setForcedTour] = useState<TourId | null>(() => forceTour);
-    const [stepIndex, setStepIndex] = useState(0);
     const [hole, setHole] = useState<Hole | null>(null);
     const [poseReady, setPoseReady] = useState(false);
     const [panelH, setPanelH] = useState(PANEL_FALLBACK_H);
+    const [dismissed, setDismissed] = useState<Partial<Record<TourId, boolean>>>(
+        {},
+    );
     const panelRef = useRef<HTMLDivElement | null>(null);
 
-    const autoTour = skipAll
+    const inferredTour = skipAll
         ? null
         : inferTourFromPath(location.pathname, location.search, routeReady);
+    // Keep a React state copy so Skip always re-renders: create tour often has
+    // forcedTour=null and stepIndex=0, so those setters alone were no-ops.
+    const autoTour =
+        inferredTour && dismissed[inferredTour] ? null : inferredTour;
 
     const activeTour: TourId | null = skipAll ? null : (forcedTour ?? autoTour);
 
+    // Reset step index during render when the tour identity changes. Doing this
+    // only in useEffect left one frame with the previous tour's stepIndex — if
+    // that was the last home step (5) and create also has 6 steps, the create
+    // tour opened on its final card so «Далее» called finish() immediately.
+    const [stepTour, setStepTour] = useState<TourId | null>(activeTour);
+    const [stepIndex, setStepIndex] = useState(0);
+    if (activeTour !== stepTour) {
+        setStepTour(activeTour);
+        setStepIndex(0);
+    }
+
     const steps = activeTour ? TOUR_STEPS[activeTour] : EMPTY_STEPS;
     const step = steps[stepIndex] ?? steps[0];
-    const isLast = stepIndex >= steps.length - 1;
+    const isLast = steps.length > 0 && stepIndex >= steps.length - 1;
     const onStepPage = step ? stepMatchesPath(step, location.pathname) : false;
 
     useEffect(() => {
         if (forceTour) {
             resetTour(forceTour);
+            setDismissed((prev) => ({ ...prev, [forceTour]: false }));
             setForcedTour(forceTour);
             setStepIndex(0);
             if (
@@ -316,14 +334,6 @@ export function ToshaOnboarding() {
         if (skipAll) setForcedTour(null);
     }, [forceTour, skipAll, location.pathname, navigate]);
 
-    // Reset step only when the active tour identity changes — not on every render.
-    const prevTourRef = useRef<TourId | null>(null);
-    useEffect(() => {
-        if (prevTourRef.current === activeTour) return;
-        prevTourRef.current = activeTour;
-        setStepIndex(0);
-    }, [activeTour]);
-
     // If the user navigates mid-tour (new-trip → preferences), snap to the
     // first step that belongs on the current page.
     useEffect(() => {
@@ -338,7 +348,10 @@ export function ToshaOnboarding() {
 
     const finish = useCallback(
         (skipped: boolean) => {
-            if (activeTour) markTourDone(activeTour, skipped);
+            if (activeTour) {
+                markTourDone(activeTour, skipped);
+                setDismissed((prev) => ({ ...prev, [activeTour]: true }));
+            }
             setForcedTour(null);
             setStepIndex(0);
             const cleaned = stripOnboardingParam(location.search);
@@ -363,6 +376,7 @@ export function ToshaOnboarding() {
                 ) ??
                 "home";
             resetTour(next);
+            setDismissed((prev) => ({ ...prev, [next]: false }));
             setForcedTour(next);
             setStepIndex(0);
             const params = new URLSearchParams(location.search);
@@ -668,7 +682,11 @@ export function ToshaOnboarding() {
                             <button
                                 type="button"
                                 className={styles.skipText}
-                                onClick={() => finish(true)}
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    finish(true);
+                                }}
                             >
                                 Пропустить
                             </button>
@@ -676,7 +694,9 @@ export function ToshaOnboarding() {
                                 <button
                                     type="button"
                                     className={styles.next}
-                                    onClick={() => {
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
                                         if (isLast) {
                                             finish(false);
                                             return;
