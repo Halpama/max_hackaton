@@ -3,3 +3,6 @@
 .env
 backend/.env
 backend/logs/
+# Trained ML artifacts — deploy to the stand separately (not via git).
+*.joblib
+environment_model.joblib

@@ -368,3 +368,40 @@ def _center_meals(day: list[PlaceCandidate]) -> list[PlaceCandidate]:
 
     middle = len(others) // 2
     return others[:middle] + near_meals[:1] + others[middle:] + near_meals[1:]
+
+
+#: Forecast icons that make outdoor stops unpleasant.
+_WET_WEATHER_ICONS = frozenset({"rain", "storm", "sleet", "snow"})
+
+
+def prefer_indoor_when_wet(
+    day: list[PlaceCandidate],
+    *,
+    weather_icon: str | None = None,
+    precipitation_chance: int | None = None,
+) -> list[PlaceCandidate]:
+    """On a wet day, keep indoor/mixed stops earlier and outdoor ones later.
+
+    Relative order inside each bucket is preserved so proximity routing is only
+    lightly disturbed. Meals are re-centred afterwards.
+    """
+    if not day:
+        return day
+    wet = (weather_icon in _WET_WEATHER_ICONS) or (
+        precipitation_chance is not None and precipitation_chance >= 50
+    )
+    if not wet:
+        return day
+
+    indoorish: list[PlaceCandidate] = []
+    outdoor: list[PlaceCandidate] = []
+    other: list[PlaceCandidate] = []
+    for candidate in day:
+        kind = candidate.environment_kind
+        if kind in ("indoor", "mixed"):
+            indoorish.append(candidate)
+        elif kind == "outdoor":
+            outdoor.append(candidate)
+        else:
+            other.append(candidate)
+    return _center_meals(indoorish + other + outdoor)
