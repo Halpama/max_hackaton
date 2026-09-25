@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.errors import UpstreamError
 from app.core.logging import get_logger
 from app.schemas.trip import CategoryKind, RatingSource
+from app.services.environment import classify_environment
 
 logger = get_logger(__name__)
 
@@ -108,6 +109,7 @@ class PlaceCandidate:
     source_name: str | None = None
     #: Typical visit length from GigaChat; None → scheduler heuristics.
     stay_minutes: int | None = None
+    environment_kind: str = "unknown"
 
     @property
     def rating(self) -> float:
@@ -338,6 +340,8 @@ def to_candidate(details: dict, city: str, interests: set[str]) -> PlaceCandidat
     if set(kinds) & EXCLUDED_KINDS:
         return None
     category = pick_category(kinds, name)
+    category_kind = pick_category_kind(kinds, name)
+    description = build_description(details, category, city)
 
     return PlaceCandidate(
         xid=str(xid),
