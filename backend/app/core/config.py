@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import Literal
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -55,7 +56,16 @@ class Settings(BaseSettings):
     #: and can be switched off if an upstream starts misbehaving mid-demo.
     kudago_enabled: bool = True
     weather_enabled: bool = True
-
+    
+    environment_model_mode: Literal["off", "shadow", "active"] = "shadow"
+    environment_model_path: str = "ml_data/environment_model.joblib"
+    #: Min model probability to override a rule-based label in active mode.
+    #: 0.75 is the sweet spot from the threshold scan on the labeled data
+    #: (retrain script prints the scan; adjust if you change the dataset).
+    environment_model_threshold: float = 0.75
+    #: Lower bar used when the rules produced no signal ("unknown").
+    environment_model_fallback_threshold: float = 0.60
+    
     max_bot_enabled: bool = False
     max_bot_token: str = ""
     max_bot_webhook_secret: str = ""
@@ -104,6 +114,9 @@ class Settings(BaseSettings):
     def max_bot_active(self) -> bool:
         return self.max_bot_enabled and self.max_bot_configured
 
+    @property
+    def environment_model_file(self) -> Path:
+        return Path(self.environment_model_path)
 
 
 @lru_cache

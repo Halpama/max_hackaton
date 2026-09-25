@@ -25,6 +25,8 @@ dev = [
     "respx>=0.21.1",
     "fakeredis[lua]>=2.26.0",
     "aiosqlite>=0.20.0",
+    "scikit-learn>=1.9.1",
+    "joblib>=1.4.0",
 ]
 
 [build-system]

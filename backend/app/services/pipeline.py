@@ -397,6 +397,7 @@ async def build_route(
                 title=candidate.title,
                 category=candidate.category,
                 category_kind=candidate.category_kind,
+                environment_kind=candidate.environment_kind,
                 city=candidate.city,
                 price_label=price_text,
                 price_value=price_value,
