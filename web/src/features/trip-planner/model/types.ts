@@ -50,6 +50,7 @@ export interface Place {
     title: string;
     category: string;
     categoryKind: "museum" | "location" | "food" | "walk";
+    environmentKind?: EnvironmentKind
     city: string;
     priceLabel: string;
     priceValue?: number;
