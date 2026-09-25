@@ -350,12 +350,19 @@ def to_candidate(details: dict, city: str, interests: set[str]) -> PlaceCandidat
         kinds=kinds,
         rate=max(1, parse_rate(details.get("rate"))),
         category=category,
-        category_kind=pick_category_kind(kinds, name),
+        category_kind=category_kind,
         address=build_address(details, city),
-        description=build_description(details, category, city),
+        description=description,
         image_url=build_image_url(details),
         city=city,
         interests=set(interests),
+        environment_kind=classify_environment(
+            title=name,
+            description=description,
+            opening_hours=None,
+            kinds=kinds,
+            category_kind=category_kind,
+        ),
     )
 
 
@@ -450,6 +457,7 @@ def kudago_to_candidate(
     address = _clean_text(item.get("address") or "") or city
     timetable = _clean_text(item.get("timetable") or "") or None
 
+    clipped = _clip_description(description)
     return PlaceCandidate(
         xid=f"kudago:{item.get('id')}",
         title=title,
@@ -460,7 +468,7 @@ def kudago_to_candidate(
         category=label,
         category_kind=kind,
         address=address,
-        description=_clip_description(description),
+        description=clipped,
         image_url=image_url,
         city=city,
         interests=set(interests),
@@ -469,6 +477,13 @@ def kudago_to_candidate(
         opening_hours=timetable,
         source_url=str(item.get("site_url") or "") or None,
         source_name="KudaGo",
+        environment_kind=classify_environment(
+            title=title,
+            description=clipped,
+            opening_hours=timetable,
+            kinds=categories,
+            category_kind=kind,
+        ),
     )
 
 

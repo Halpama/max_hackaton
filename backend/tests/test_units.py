@@ -353,3 +353,52 @@ def test_environment_model_override_in_active_mode(tmp_path, monkeypatch) -> Non
     )
     assert label == "outdoor"
     assert score >= settings.environment_model_threshold
+
+def test_prefer_indoor_when_wet_keeps_outdoor_later() -> None:
+    from app.services.places import PlaceCandidate
+    from app.services.scheduler import prefer_indoor_when_wet
+
+    def place(xid: str, kind: str) -> PlaceCandidate:
+        return PlaceCandidate(
+            xid=xid,
+            title=xid,
+            coordinates=(30.0, 60.0),
+            kinds=[],
+            rate=3,
+            category="x",
+            category_kind="location",
+            address="a",
+            description="d",
+            image_url="",
+            city="СПб",
+            interests=set(),
+            environment_kind=kind,
+        )
+
+    day = [place("park", "outdoor"), place("museum", "indoor"), place("cafe", "indoor")]
+    dry = prefer_indoor_when_wet(day, weather_icon="clear", precipitation_chance=10)
+    assert [c.xid for c in dry] == ["park", "museum", "cafe"]
+
+    wet = prefer_indoor_when_wet(day, weather_icon="rain", precipitation_chance=80)
+    assert [c.xid for c in wet] == ["museum", "cafe", "park"]
+
+
+def test_to_candidate_sets_environment_kind(monkeypatch) -> None:
+    from app.services import places
+
+    monkeypatch.setattr(
+        places,
+        "classify_environment",
+        lambda **kwargs: "outdoor",
+    )
+    details = {
+        "xid": "otm1",
+        "name": "Летний сад",
+        "point": {"lon": 30.33, "lat": 59.94},
+        "kinds": "gardens_and_parks",
+        "rate": "3",
+        "preview": {},
+    }
+    candidate = places.to_candidate(details, "Санкт-Петербург", {"walks"})
+    assert candidate is not None
+    assert candidate.environment_kind == "outdoor"

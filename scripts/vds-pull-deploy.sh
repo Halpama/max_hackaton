@@ -34,6 +34,12 @@ fi
 echo "deploying $LOCAL -> $REMOTE"
 git reset --hard "origin/$BRANCH"
 
+# Untracked artifacts survive reset --hard. Keep the environment classifier on
+# the host at backend/ml_data/environment_model.joblib (never commit *.joblib).
+if [ ! -f backend/ml_data/environment_model.joblib ]; then
+  echo "WARN: missing backend/ml_data/environment_model.joblib — indoor/outdoor model off until you scp it" >&2
+fi
+
 # Preserve server-only env files if git clean ever runs; do not delete them here.
 $COMPOSE up -d --build
 $COMPOSE ps

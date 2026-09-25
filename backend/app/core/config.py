@@ -116,7 +116,12 @@ class Settings(BaseSettings):
 
     @property
     def environment_model_file(self) -> Path:
-        return Path(self.environment_model_path)
+        """Resolve relative paths against the backend package root, not cwd."""
+        path = Path(self.environment_model_path)
+        if path.is_absolute():
+            return path
+        backend_root = Path(__file__).resolve().parents[2]
+        return backend_root / path
 
 
 @lru_cache

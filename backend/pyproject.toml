@@ -16,6 +16,9 @@ dependencies = [
     "alembic>=1.14.0",
     "orjson>=3.10.0",
     "python-dateutil>=2.9.0",
+    # Indoor/outdoor/mixed classifier (joblib artifact on the server).
+    "scikit-learn>=1.9.1",
+    "joblib>=1.4.0",
 ]
 
 [project.optional-dependencies]
@@ -25,8 +28,6 @@ dev = [
     "respx>=0.21.1",
     "fakeredis[lua]>=2.26.0",
     "aiosqlite>=0.20.0",
-    "scikit-learn>=1.9.1",
-    "joblib>=1.4.0",
 ]
 
 [build-system]
