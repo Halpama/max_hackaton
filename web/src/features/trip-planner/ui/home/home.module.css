@@ -30,6 +30,9 @@
     overflow: visible;
     text-align: left;
     color: inherit;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
     opacity: 0;
     transform: translateY(14px) scale(0.98);
     animation: tileReveal 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -81,6 +84,9 @@
     position: absolute;
     inset: 0;
     z-index: 0;
+    /* Lets the card own the touch target: iOS never starts its long-press
+       image preview/save sheet on a photo under the finger. */
+    pointer-events: none;
 }
 
 .mediaFrame > * {

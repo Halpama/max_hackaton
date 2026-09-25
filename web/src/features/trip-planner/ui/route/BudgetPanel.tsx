@@ -7,7 +7,7 @@ import {
   type LedgerEntry,
   type LedgerKind,
 } from '../../model/useTripLocalState'
-import { PlusIcon } from '../shared/icons'
+import { PlusIcon } from '../shared/icons-sprite'
 import styles from './BudgetPanel.module.css'
 
 interface BudgetPanelProps {

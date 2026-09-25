@@ -61,6 +61,14 @@
   justify-content: center;
   line-height: 0;
   cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.92);
+  background: rgba(0, 122, 255, 0.2);
 }
 
 .btn svg {

@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
+import svgr from 'vite-plugin-svgr'
 import { defineConfig } from 'vite'
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
@@ -9,7 +10,14 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url))
 const API_PROXY_TARGET = process.env.VITE_PROXY_TARGET ?? 'http://127.0.0.1:8000'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    svgr({
+      svgrOptions: {
+        icon: true,
+      },
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(rootDir, 'src'),

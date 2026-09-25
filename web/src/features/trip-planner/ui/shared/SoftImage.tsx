@@ -64,6 +64,8 @@ export function SoftImage({
           alt={alt}
           loading={loading}
           decoding="async"
+          draggable={false}
+          onDragStart={(event) => event.preventDefault()}
           onLoad={() => setLoaded(true)}
           onError={() => {
             setFailed(true)

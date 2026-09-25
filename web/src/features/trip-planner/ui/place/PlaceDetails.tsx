@@ -3,7 +3,7 @@ import type { Place } from '../../model'
 import { formatPlaceTitle } from '../../lib/format'
 import { parseOpeningHours } from '../../lib/openingHours'
 import { CategoryBadge } from '../shared/CategoryBadge'
-import { ChevronDownIcon, StarIcon } from '../shared/icons'
+import { ChevronDownIcon, StarIcon } from '../shared/icons-sprite'
 import { SoftImage } from '../shared/SoftImage'
 import styles from './PlaceHero.module.css'
 
