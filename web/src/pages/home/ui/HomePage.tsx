@@ -11,7 +11,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input, Icon16SearchOutline } from "@maxhub/max-ui";
 import { ROUTES } from "@/shared/config";
 import {
-    CompassIcon,
     DeleteTripModal,
     HeartIcon,
     InfoIcon,
@@ -33,6 +32,7 @@ import {
 } from "@/features/trip-planner/lib/cityImage";
 import { formatPlaceTitle } from "@/features/trip-planner/lib/format";
 import tripStyles from "@/features/trip-planner/ui/shared/trip.module.css";
+import EmptyState from "@/shared/ui/EmptyState";
 import styles from "@/features/trip-planner/ui/home/home.module.css";
 
 export function HomePage() {
@@ -220,12 +220,10 @@ function TripsTab({
                     ))}
                 </div>
             ) : trips.length === 0 ? (
-                <StatusView
-                    icon={<CompassIcon />}
+                <EmptyState
                     title="Поездок пока нет"
-                    text="Создайте первую — ИИ подберёт места и соберёт маршрут по дням."
-                    actionLabel="Новая поездка"
-                    onAction={onCreate}
+                    description="Соберите первый маршрут, и мы подберём места по дням."
+                    action={{ label: "Собрать маршрут", onClick: onCreate }}
                 />
             ) : (
                 <div className={styles.grid}>
