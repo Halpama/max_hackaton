@@ -370,38 +370,35 @@ def _center_meals(day: list[PlaceCandidate]) -> list[PlaceCandidate]:
     return others[:middle] + near_meals[:1] + others[middle:] + near_meals[1:]
 
 
-#: Forecast icons that make outdoor stops unpleasant.
-_WET_WEATHER_ICONS = frozenset({"rain", "storm", "sleet", "snow"})
+#: Open-air stops allowed in a day once precipitation chance reaches this.
+#: A daily forecast cannot say *when* it will rain, so the cap is per-day.
+STORMY_PRECIPITATION_CHANCE = 90
 
 
-def prefer_indoor_when_wet(
+def limit_outdoor_when_stormy(
     day: list[PlaceCandidate],
     *,
-    weather_icon: str | None = None,
     precipitation_chance: int | None = None,
 ) -> list[PlaceCandidate]:
-    """On a wet day, keep indoor/mixed stops earlier and outdoor ones later.
+    """On an ≥90% precipitation day keep at most one open-air stop.
 
-    Relative order inside each bucket is preserved so proximity routing is only
-    lightly disturbed. Meals are re-centred afterwards.
+    The single survivor is the last outdoor stop of the day — with only a
+    daily forecast we cannot promise the rain comes in the evening, but the
+    afternoon slot is still the best available bet. Removed places are simply
+    dropped from the itinerary; a shorter wet day beats three soaked stops.
     """
-    if not day:
-        return day
-    wet = (weather_icon in _WET_WEATHER_ICONS) or (
-        precipitation_chance is not None and precipitation_chance >= 50
-    )
-    if not wet:
+    if not day or precipitation_chance is None or precipitation_chance < STORMY_PRECIPITATION_CHANCE:
         return day
 
-    indoorish: list[PlaceCandidate] = []
-    outdoor: list[PlaceCandidate] = []
-    other: list[PlaceCandidate] = []
-    for candidate in day:
-        kind = candidate.environment_kind
-        if kind in ("indoor", "mixed"):
-            indoorish.append(candidate)
-        elif kind == "outdoor":
-            outdoor.append(candidate)
-        else:
-            other.append(candidate)
-    return _center_meals(indoorish + other + outdoor)
+    outdoor_indexes = [i for i, c in enumerate(day) if c.environment_kind == "outdoor"]
+    if len(outdoor_indexes) <= 1:
+        return day
+
+    keep = outdoor_indexes[-1]
+    drop = set(outdoor_indexes[:-1])
+    trimmed = [c for i, c in enumerate(day) if i not in drop]
+    # The kept outdoor stop moves to the end of the day (the best bet when a
+    # daily forecast does not name rain hours); the rest keep their proximity
+    # order untouched.
+    survivors = [c for c in trimmed if c is not day[keep]] + [day[keep]]
+    return _center_meals(survivors)
