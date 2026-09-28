@@ -1,28 +1,46 @@
-![2РИСТ](web/public/readme-banner.svg)
+<p align="center">
+  <img src="web/public/readme-banner.svg" alt="2РИСТ" width="100%" />
+</p>
 
-# 2РИСТ
+<h1 align="center">2РИСТ</h1>
 
-Мини-приложение и бот для **MAX**: ИИ собирает маршрут поездки по дням — с картой,  
-гидом по городу, сборами и бюджетом.
+<p align="center">
+  Мини-приложение и бот для <b>MAX</b>: ИИ собирает маршрут поездки по дням — с картой,<br/>
+  гидом по городу, сборами и бюджетом.
+</p>
 
-![Backend tests](https://img.shields.io/badge/pytest-120%20passed-brightgreen?label=backend&color=2f6f4e)![Web tests](https://img.shields.io/badge/vitest-35%20passed-brightgreen?label=web&color=2f6f4e)  
-![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)![Docker Compose](https://img.shields.io/badge/Docker-compose-blue?logo=docker&logoColor=white)
+<p align="center">
+  <img src="https://img.shields.io/badge/pytest-120%20passed-brightgreen?label=backend&color=2f6f4e" alt="Backend tests" />
+  <img src="https://img.shields.io/badge/vitest-35%20passed-brightgreen?label=web&color=2f6f4e" alt="Web tests" />
+  <br/>
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
+  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/Docker-compose-blue?logo=docker&logoColor=white" alt="Docker Compose" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT" />
+</p>
 
-**Команда:** AI_B2B_SaaS — Шипилов Никита, Гулина Виктория, Кудяева Виктория, Абакаров Арслан  
-**Трек:** Досуг и развлечения · **Репозиторий:** [https://github.com/Halpama/max_hackaton](https://github.com/Halpama/max_hackaton)
+<p align="center">
+  <b>Команда:</b> AI_B2B_SaaS — Шипилов Никита, Гулина Виктория, Кудяева Виктория, Абакаров Арслан<br/>
+  <b>Трек:</b> Досуг и развлечения ·
+  <b>Репозиторий:</b> <a href="https://github.com/Halpama/max_hackaton">Halpama/max_hackaton</a>
+</p>
 
+| Артефакт сдачи | Путь |
+| --- | --- |
+| OpenAPI 3 | [openapi.yaml](openapi.yaml) / [openapi.json](openapi.json) |
+| DATA-API | [DATA-API.yaml](DATA-API.yaml) |
+| Тестовые данные | [testdata/](testdata/) |
+| Зависимости backend | [backend/requirements.txt](backend/requirements.txt) |
+| Зависимости web | [web/package-lock.json](web/package-lock.json) |
+| Env-шаблоны | [backend/.env.example](backend/.env.example), [web/.env.example](web/.env.example) |
 
-| Артефакт сдачи      | Путь                                                                                   |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| OpenAPI 3           | `[openapi.yaml](openapi.yaml)` / `[openapi.json](openapi.json)`                        |
-| DATA-API            | `[DATA-API.yaml](DATA-API.yaml)`                                                       |
-| Тестовые данные     | `[testdata/](testdata/)`                                                               |
-| Зависимости backend | `[backend/requirements.txt](backend/requirements.txt)`                                 |
-| Зависимости web     | `[web/package-lock.json](web/package-lock.json)`                                       |
-| Env-шаблоны         | `[backend/.env.example](backend/.env.example)`, `[web/.env.example](web/.env.example)` |
-
-
-Публичный стенд: мини-приложение [https://2-rist.ru](https://2-rist.ru) · API [https://api.2-rist.ru](https://api.2-rist.ru) · Swagger [https://api.2-rist.ru/docs](https://api.2-rist.ru/docs)
+<p align="center">
+  Публичный стенд:
+  <a href="https://2-rist.ru">2-rist.ru</a> ·
+  <a href="https://api.2-rist.ru">API</a> ·
+  <a href="https://api.2-rist.ru/docs">Swagger</a>
+</p>
 
 ---
 
@@ -80,7 +98,7 @@ MAX (бот + WebApp bridge)
          GigaChat · KudaGo · OpenTripMap · ORS/OSRM · Open-Meteo
 ```
 
-Подробности и диаграммы: `[ARCHITECTURE.md](ARCHITECTURE.md)`.
+Подробности и диаграммы: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 
 | Компонент  | Роль                                                  |
@@ -127,7 +145,7 @@ trip.cmd up        # Windows (Docker Desktop)
 
 ## Параметры и переменные окружения
 
-Полные шаблоны **без секретов**: `[backend/.env.example](backend/.env.example)`, `[web/.env.example](web/.env.example)`.
+Полные шаблоны **без секретов**: [backend/.env.example](backend/.env.example), [web/.env.example](web/.env.example).
 
 ### Обязательные для полноценной генерации маршрута
 
@@ -148,7 +166,7 @@ trip.cmd up        # Windows (Docker Desktop)
 | `ORS_API_KEY`           | маршрутизация; иначе публичный OSRM                                                                 |
 | `MAX_BOT_TOKEN`         | бот MAX; без токена мини-app всё равно открывается по URL                                           |
 | `MAX_BOT_ENABLED=true`  | включить бота (`./trip bot on`)                                                                     |
-| `AUTH_MODE=dev` | `max` | `dev` — без подписи initData (локалка/жюри Docker); `max` — проверка подписи + свежесть `auth_date` |
+| `AUTH_MODE` (`dev` / `max`) | `dev` — без подписи initData (локалка/жюри Docker); `max` — проверка подписи + свежесть `auth_date` |
 | `VITE_API_BASE_URL`     | в Docker-образе web задаётся на API; локальный Vite проксирует `/api`                               |
 
 
@@ -177,8 +195,8 @@ trip.cmd up        # Windows (Docker Desktop)
 
 | Стек                   | Фиксация версий                                                                                             |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Backend (Python 3.12+) | `[backend/requirements.txt](backend/requirements.txt)` + `[backend/pyproject.toml](backend/pyproject.toml)` |
-| Web (Node 22)          | `[web/package-lock.json](web/package-lock.json)` + `[web/package.json](web/package.json)`                   |
+| Backend (Python 3.12+) | [backend/requirements.txt](backend/requirements.txt) + [backend/pyproject.toml](backend/pyproject.toml) |
+| Web (Node 22)          | [web/package-lock.json](web/package-lock.json) + [web/package.json](web/package.json)                   |
 
 
 Docker-образы ставят зависимости из этих файлов при `docker compose build`.
@@ -217,11 +235,11 @@ Docker-образы ставят зависимости из этих файло
 
 | Файл                                                                           | Назначение                |
 | ------------------------------------------------------------------------------ | ------------------------- |
-| `[testdata/trip_draft_kazan.json](testdata/trip_draft_kazan.json)`             | тело `POST /api/v1/trips` |
-| `[testdata/trip_draft_free_budget.json](testdata/trip_draft_free_budget.json)` | бюджет `0`                |
+| [testdata/trip_draft_kazan.json](testdata/trip_draft_kazan.json)             | тело `POST /api/v1/trips` |
+| [testdata/trip_draft_free_budget.json](testdata/trip_draft_free_budget.json) | бюджет `0`                |
 
 
-Порядок работы — `[testdata/README.md](testdata/README.md)`. Контракт проверок API — `[DATA-API.yaml](DATA-API.yaml)`.
+Порядок работы — [testdata/README.md](testdata/README.md). Контракт проверок API — [DATA-API.yaml](DATA-API.yaml).
 
 ## Пошаговая проверка
 
@@ -304,7 +322,7 @@ docker compose down -v   # полный сброс volume (БД очиститс
 Интеграция **полная на уровне MVP**: Bot API-клиент (`platform-api2.max.ru`), команды `/start` `/help` `/about`, native `open_app`, webhook **или** long polling, WebApp bridge (`ready`, `initData` → `Authorization: tma …`, BackButton, `openLink`), проверка подписи и срока `auth_date` при `AUTH_MODE=max`, deep-link `start_param` → `/trips/new`.
 
 По умолчанию бот **выключен** (`MAX_BOT_ENABLED=false`). Включение: токен в `.env` → `./trip bot on`.  
-Подробнее: `[backend/README.md](backend/README.md#max-бот)`.
+Подробнее: [backend/README.md](backend/README.md#max-бот).
 
 ## Собственный API
 
@@ -312,8 +330,8 @@ docker compose down -v   # полный сброс volume (БД очиститс
 |              |                                                                                      |
 | ------------ | ------------------------------------------------------------------------------------ |
 | Base (стенд) | `https://api.2-rist.ru`                                                              |
-| OpenAPI      | `[openapi.yaml](openapi.yaml)`                                                       |
-| DATA-API     | `[DATA-API.yaml](DATA-API.yaml)`                                                     |
+| OpenAPI      | [openapi.yaml](openapi.yaml)                                                       |
+| DATA-API     | [DATA-API.yaml](DATA-API.yaml)                                                     |
 | Swagger UI   | `/docs`                                                                              |
 | Учётки       | отдельного логина/пароля нет: идентификация через MAX `initData` или `AUTH_MODE=dev` |
 
