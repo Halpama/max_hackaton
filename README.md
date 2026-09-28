@@ -1,28 +1,46 @@
-![2РИСТ](web/public/readme-banner.svg)
+<p align="center">
+  <img src="web/public/readme-banner.svg" alt="2РИСТ" width="100%" />
+</p>
 
-# 2РИСТ
+<h1 align="center">2РИСТ</h1>
 
-Мини-приложение и бот для **MAX**: ИИ собирает маршрут поездки по дням — с картой,  
-гидом по городу, сборами и бюджетом.
+<p align="center">
+  Мини-приложение и бот для <b>MAX</b>: ИИ собирает маршрут поездки по дням — с картой,<br/>
+  гидом по городу, сборами и бюджетом.
+</p>
 
-![Backend tests](https://img.shields.io/badge/pytest-120%20passed-brightgreen?label=backend&color=2f6f4e)![Web tests](https://img.shields.io/badge/vitest-35%20passed-brightgreen?label=web&color=2f6f4e)  
-![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)![Docker Compose](https://img.shields.io/badge/Docker-compose-blue?logo=docker&logoColor=white)
+<p align="center">
+  <img src="https://img.shields.io/badge/pytest-120%20passed-brightgreen?label=backend&color=2f6f4e" alt="Backend tests" />
+  <img src="https://img.shields.io/badge/vitest-35%20passed-brightgreen?label=web&color=2f6f4e" alt="Web tests" />
+  <br/>
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
+  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/Docker-compose-blue?logo=docker&logoColor=white" alt="Docker Compose" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT" />
+</p>
 
-**Команда:** AI_B2B_SaaS — Шипилов Никита, Гулина Виктория, Кудяева Виктория, Абакаров Арслан  
-**Трек:** Досуг и развлечения · **Репозиторий:** [https://github.com/Halpama/max_hackaton](https://github.com/Halpama/max_hackaton)
+<p align="center">
+  <b>Команда:</b> AI_B2B_SaaS — Шипилов Никита, Гулина Виктория, Кудяева Виктория, Абакаров Арслан<br/>
+  <b>Трек:</b> Досуг и развлечения ·
+  <b>Репозиторий:</b> <a href="https://github.com/Halpama/max_hackaton">Halpama/max_hackaton</a>
+</p>
 
+| Артефакт сдачи | Путь |
+| --- | --- |
+| OpenAPI 3 | [openapi.yaml](openapi.yaml) / [openapi.json](openapi.json) |
+| DATA-API | [DATA-API.yaml](DATA-API.yaml) |
+| Тестовые данные | [testdata/](testdata/) |
+| Зависимости backend | [backend/requirements.txt](backend/requirements.txt) |
+| Зависимости web | [web/package-lock.json](web/package-lock.json) |
+| Env-шаблоны | [backend/.env.example](backend/.env.example), [web/.env.example](web/.env.example) |
 
-| Артефакт сдачи      | Путь                                                                                   |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| OpenAPI 3           | [openapi.yaml](openapi.yaml) / [openapi.json](openapi.json)                        |
-| DATA-API            | [DATA-API.yaml](DATA-API.yaml)                                                       |
-| Тестовые данные     | [testdata/](testdata/)                                                               |
-| Зависимости backend | [backend/requirements.txt](backend/requirements.txt)                                 |
-| Зависимости web     | [web/package-lock.json](web/package-lock.json)                                       |
-| Env-шаблоны         | [backend/.env.example](backend/.env.example), [web/.env.example](web/.env.example) |
-
-
-Публичный стенд: мини-приложение [https://2-rist.ru](https://2-rist.ru) · API [https://api.2-rist.ru](https://api.2-rist.ru) · Swagger [https://api.2-rist.ru/docs](https://api.2-rist.ru/docs)
+<p align="center">
+  Публичный стенд:
+  <a href="https://2-rist.ru">2-rist.ru</a> ·
+  <a href="https://api.2-rist.ru">API</a> ·
+  <a href="https://api.2-rist.ru/docs">Swagger</a>
+</p>
 
 ---
 
