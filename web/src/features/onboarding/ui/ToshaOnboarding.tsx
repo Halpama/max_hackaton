@@ -381,6 +381,9 @@ export function ToshaOnboarding() {
             setStepIndex(0);
             const params = new URLSearchParams(location.search);
             params.set("onboarding", next);
+            if (next === "home") {
+                params.delete("tab");
+            }
             const targetPath = tourHomePath(next);
             navigate(
                 {
