@@ -1,0 +1,115 @@
+# DATA-API.yaml — конфигурация обязательных проверок собственного API
+# Хакатон MAX «Досуг и развлечения» · команда AI_B2B_SaaS · продукт 2РИСТ
+#
+# schema_version — версия ЭТОГО файла (для платформы оценки), не версия API.
+
+schema_version: "1.0"
+solution_name: "2РИСТ"
+team_id: "AI_B2B_SaaS"
+api_base_url: "https://api.2-rist.ru"
+openapi: "./openapi.yaml"
+
+# Auth: в prod API ожидает заголовок Authorization: tma <MAX initData>.
+# Для локальной/жюри-проверки через Docker по умолчанию AUTH_MODE=dev —
+# заголовок не обязателен, все запросы мапятся на DEV_USER_ID=1.
+# Роль "jury" = любой клиент без initData при AUTH_MODE=dev.
+
+roles:
+  - id: jury
+    description: "Локальный Docker / AUTH_MODE=dev — без MAX initData"
+  - id: max_user
+    description: "Пользователь MAX WebApp с валидным Authorization: tma <initData>"
+
+checks:
+  - id: health
+    description: "Liveness + статус интеграций"
+    method: GET
+    path: /health
+    role: jury
+    headers: {}
+    expected_status: [200]
+    expected_content_type: application/json
+    expected_body:
+      required_fields: [status, env, redis, gigachat, bot]
+
+  - id: openapi_docs
+    description: "Интерактивная документация"
+    method: GET
+    path: /docs
+    role: jury
+    expected_status: [200]
+
+  - id: cities_suggest
+    description: "Автокомплит городов РФ"
+    method: GET
+    path: /api/v1/geo/cities
+    role: jury
+    query:
+      q: "Казань"
+    expected_status: [200]
+    expected_content_type: application/json
+    expected_body:
+      type: array
+
+  - id: create_trip
+    description: "Создать поездку (генерация в фоне)"
+    method: POST
+    path: /api/v1/trips
+    role: jury
+    headers:
+      Content-Type: application/json
+    body_file: ./testdata/trip_draft_kazan.json
+    expected_status: [202]
+    expected_content_type: application/json
+    expected_body:
+      required_fields: [id, status]
+      status_in: [pending, running]
+
+  - id: trip_status
+    description: "Статус поездки и готовый маршрут"
+    method: GET
+    path: /api/v1/trips/{trip_id}
+    role: jury
+    path_params:
+      trip_id: "<from create_trip.id>"
+    expected_status: [200]
+    expected_content_type: application/json
+    expected_body:
+      required_fields: [id, status, draft]
+      # status → pending|running|ready|failed; при ready есть route
+
+  - id: trip_stream
+    description: "SSE-прогресс генерации"
+    method: GET
+    path: /api/v1/trips/{trip_id}/stream
+    role: jury
+    path_params:
+      trip_id: "<from create_trip.id>"
+    expected_status: [200]
+    expected_content_type: text/event-stream
+
+  - id: list_trips
+    description: "Список поездок пользователя"
+    method: GET
+    path: /api/v1/trips
+    role: jury
+    expected_status: [200]
+    expected_content_type: application/json
+
+  - id: favorites_list
+    description: "Избранные места"
+    method: GET
+    path: /api/v1/favorites
+    role: jury
+    expected_status: [200]
+    expected_content_type: application/json
+
+  - id: bot_status
+    description: "Статус MAX-бота (enabled/token/mode)"
+    method: GET
+    path: /api/v1/bot/status
+    role: jury
+    expected_status: [200]
+    expected_content_type: application/json
+    expected_body:
+      required_fields: [enabled, configured, mode]

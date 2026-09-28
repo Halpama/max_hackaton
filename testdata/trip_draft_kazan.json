@@ -1,0 +1,13 @@
+{
+  "destination": "Казань",
+  "startDate": "2026-10-10",
+  "startTime": "10:00",
+  "endDate": "2026-10-11",
+  "endTime": "20:00",
+  "budget": 8000,
+  "adults": 2,
+  "children": 0,
+  "interests": ["sights", "gastro", "museums"],
+  "pace": "medium",
+  "findHousing": false
+}

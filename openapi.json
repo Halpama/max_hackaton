@@ -1,0 +1,2291 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "2РИСТ API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/trips": {
+      "post": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Create Trip",
+        "description": "Register the trip and kick off generation; progress arrives over SSE.",
+        "operationId": "create_trip_api_v1_trips_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Get Trips",
+        "operationId": "get_trips_api_v1_trips_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TripSummary"
+                  },
+                  "title": "Response Get Trips Api V1 Trips Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trips/{trip_id}": {
+      "get": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Get Trip By Id",
+        "operationId": "get_trip_by_id_api_v1_trips__trip_id__get",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Изменить параметры поездки",
+        "description": "Сохраняет новые параметры без изменения города, очищает старый маршрут и запускает его повторную генерацию.",
+        "operationId": "update_trip_api_v1_trips__trip_id__patch",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripEditDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripCreated"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Поездка уже находится в процессе генерации."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Delete Trip",
+        "description": "Soft-hide the trip. Places, favourites and plan caches stay untouched.",
+        "operationId": "delete_trip_api_v1_trips__trip_id__delete",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trips/{trip_id}/edit": {
+      "get": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Получить параметры поездки для редактирования",
+        "description": "Возвращает параметры формы для страницы /trips/new. Город намеренно не включается: он сохраняется на сервере.",
+        "operationId": "get_trip_edit_draft_api_v1_trips__trip_id__edit_get",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripEditDraft"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trips/{trip_id}/retry": {
+      "post": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Retry Trip",
+        "description": "Re-run generation for a trip that failed.",
+        "operationId": "retry_trip_api_v1_trips__trip_id__retry_post",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trips/{trip_id}/stream": {
+      "get": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Stream Trip",
+        "description": "Server-sent events with the real generation progress.\n\nAuthorisation and the ownership check run up front against a short-lived\nsession so the stream itself never holds a database connection open.",
+        "operationId": "stream_trip_api_v1_trips__trip_id__stream_get",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trips/{trip_id}/state": {
+      "get": {
+        "tags": [
+          "trip-state"
+        ],
+        "summary": "Get State",
+        "operationId": "get_state_api_v1_trips__trip_id__state_get",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripStateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "trip-state"
+        ],
+        "summary": "Put State",
+        "operationId": "put_state_api_v1_trips__trip_id__state_put",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripStateUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripStateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trips/{trip_id}/ledger": {
+      "get": {
+        "tags": [
+          "trip-state"
+        ],
+        "summary": "Get Ledger",
+        "operationId": "get_ledger_api_v1_trips__trip_id__ledger_get",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LedgerEntryOut"
+                  },
+                  "title": "Response Get Ledger Api V1 Trips  Trip Id  Ledger Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "trip-state"
+        ],
+        "summary": "Post Ledger",
+        "operationId": "post_ledger_api_v1_trips__trip_id__ledger_post",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerEntryIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trips/{trip_id}/ledger/{entry_id}": {
+      "delete": {
+        "tags": [
+          "trip-state"
+        ],
+        "summary": "Delete Ledger",
+        "operationId": "delete_ledger_api_v1_trips__trip_id__ledger__entry_id__delete",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entry Id"
+            }
+          },
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/places/{place_id}": {
+      "get": {
+        "tags": [
+          "places"
+        ],
+        "summary": "Get Place By Id",
+        "description": "Resolve a place saved from any previously generated itinerary.",
+        "operationId": "get_place_by_id_api_v1_places__place_id__get",
+        "parameters": [
+          {
+            "name": "place_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Place Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Place"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/favorites": {
+      "get": {
+        "tags": [
+          "favorites"
+        ],
+        "summary": "Get Favorites",
+        "description": "Favourite places, newest first. Unknown ids are skipped.",
+        "operationId": "get_favorites_api_v1_favorites_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Place"
+                  },
+                  "title": "Response Get Favorites Api V1 Favorites Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/favorites/{place_id}": {
+      "put": {
+        "tags": [
+          "favorites"
+        ],
+        "summary": "Put Favorite",
+        "operationId": "put_favorite_api_v1_favorites__place_id__put",
+        "parameters": [
+          {
+            "name": "place_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Place Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "favorites"
+        ],
+        "summary": "Delete Favorite",
+        "operationId": "delete_favorite_api_v1_favorites__place_id__delete",
+        "parameters": [
+          {
+            "name": "place_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Place Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/geo/cities": {
+      "get": {
+        "tags": [
+          "geo"
+        ],
+        "summary": "Suggest Cities",
+        "operationId": "suggest_cities_api_v1_geo_cities_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "description": "Partial city name",
+              "default": "",
+              "title": "Q"
+            },
+            "description": "Partial city name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CitySuggestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bot/status": {
+      "get": {
+        "tags": [
+          "bot"
+        ],
+        "summary": "Bot Status",
+        "operationId": "bot_status_api_v1_bot_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Bot Status Api V1 Bot Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bot/invite": {
+      "post": {
+        "tags": [
+          "bot"
+        ],
+        "summary": "Bot Invite",
+        "description": "Send the start keyboard to a user.\n\nDevelopment: open when the bot is enabled.\nProduction: requires `X-Max-Bot-Api-Secret` matching `MAX_BOT_WEBHOOK_SECRET`\nso random clients cannot spam invites through the public API.",
+        "operationId": "bot_invite_api_v1_bot_invite_post",
+        "parameters": [
+          {
+            "name": "x-max-bot-api-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Max-Bot-Api-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Bot Invite Api V1 Bot Invite Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bot/webhook": {
+      "post": {
+        "tags": [
+          "bot"
+        ],
+        "summary": "Bot Webhook",
+        "description": "Receive MAX bot updates. Returns 200 even on handler errors.",
+        "operationId": "bot_webhook_api_v1_bot_webhook_post",
+        "parameters": [
+          {
+            "name": "x-max-bot-api-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Max-Bot-Api-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "description": "Liveness probe plus a quick view of which integrations are configured.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Activity": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "placeId": {
+            "type": "string",
+            "title": "Placeid"
+          },
+          "time": {
+            "type": "string",
+            "title": "Time"
+          },
+          "durationLabel": {
+            "type": "string",
+            "title": "Durationlabel"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "meta": {
+            "type": "string",
+            "title": "Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "placeId",
+          "time",
+          "durationLabel",
+          "title",
+          "meta"
+        ],
+        "title": "Activity"
+      },
+      "CityGuide": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "history": {
+            "type": "string",
+            "title": "History"
+          },
+          "highlights": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Highlights"
+          },
+          "tripMonth": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Tripmonth"
+          },
+          "tripMonthLabel": {
+            "type": "string",
+            "title": "Tripmonthlabel"
+          },
+          "seasonality": {
+            "items": {
+              "$ref": "#/components/schemas/SeasonalityMonth"
+            },
+            "type": "array",
+            "title": "Seasonality"
+          },
+          "seasonalitySource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seasonalitysource"
+          },
+          "imageUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imageurl"
+          },
+          "sourceUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceurl"
+          },
+          "sourceName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "summary",
+          "history",
+          "highlights",
+          "tripMonth",
+          "tripMonthLabel",
+          "seasonality"
+        ],
+        "title": "CityGuide"
+      },
+      "CitySuggestResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CitySuggestion"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "title": "CitySuggestResponse"
+      },
+      "CitySuggestion": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "subtitle": {
+            "type": "string",
+            "title": "Subtitle",
+            "default": ""
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label"
+        ],
+        "title": "CitySuggestion"
+      },
+      "DayPlan": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "dateLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datelabel"
+          },
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/Activity"
+            },
+            "type": "array",
+            "title": "Activities"
+          },
+          "transits": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TransitLeg"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Transits"
+          },
+          "weather": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DayWeather"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "activities",
+          "transits"
+        ],
+        "title": "DayPlan"
+      },
+      "DayWeather": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "icon": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "cloudy",
+              "fog",
+              "rain",
+              "sleet",
+              "snow",
+              "storm"
+            ],
+            "title": "Icon"
+          },
+          "tempHigh": {
+            "type": "integer",
+            "title": "Temphigh"
+          },
+          "tempLow": {
+            "type": "integer",
+            "title": "Templow"
+          },
+          "precipitationChance": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precipitationchance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "icon",
+          "tempHigh",
+          "tempLow"
+        ],
+        "title": "DayWeather"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InviteRequest": {
+        "properties": {
+          "userId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Userid"
+          },
+          "chatId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chatid"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "title": "InviteRequest",
+        "description": "Ops helper: push a planner invite to a known MAX user / chat."
+      },
+      "LedgerEntryIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "expense",
+              "topup"
+            ],
+            "title": "Kind"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Amount"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "amount"
+        ],
+        "title": "LedgerEntryIn"
+      },
+      "LedgerEntryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "expense",
+              "topup"
+            ],
+            "title": "Kind"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "createdAt": {
+            "type": "integer",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "amount",
+          "title",
+          "date",
+          "createdAt"
+        ],
+        "title": "LedgerEntryOut"
+      },
+      "PackingBlock": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "bullet",
+              "check"
+            ],
+            "title": "Type"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "title": "PackingBlock",
+        "description": "Mirrors PackingBlock in web/src/features/trip-planner/model/useTripLocalState.ts."
+      },
+      "Place": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "categoryKind": {
+            "type": "string",
+            "enum": [
+              "museum",
+              "location",
+              "food",
+              "walk"
+            ],
+            "title": "Categorykind"
+          },
+          "environmentKind": {
+            "type": "string",
+            "enum": [
+              "indoor",
+              "outdoor",
+              "mixed",
+              "unknown"
+            ],
+            "title": "Environmentkind",
+            "default": "unknown"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "priceLabel": {
+            "type": "string",
+            "title": "Pricelabel"
+          },
+          "priceValue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricevalue"
+          },
+          "priceEstimated": {
+            "type": "boolean",
+            "title": "Priceestimated",
+            "default": true
+          },
+          "durationLabel": {
+            "type": "string",
+            "title": "Durationlabel"
+          },
+          "timeRange": {
+            "type": "string",
+            "title": "Timerange"
+          },
+          "rating": {
+            "type": "number",
+            "title": "Rating"
+          },
+          "reviewsLabel": {
+            "type": "string",
+            "title": "Reviewslabel"
+          },
+          "ratingSource": {
+            "type": "string",
+            "enum": [
+              "catalog",
+              "estimate"
+            ],
+            "title": "Ratingsource",
+            "default": "estimate"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "imageUrl": {
+            "type": "string",
+            "title": "Imageurl"
+          },
+          "openingHours": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Openinghours"
+          },
+          "sourceUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceurl"
+          },
+          "sourceName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcename"
+          },
+          "coordinates": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Coordinates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "category",
+          "categoryKind",
+          "city",
+          "priceLabel",
+          "durationLabel",
+          "timeRange",
+          "rating",
+          "reviewsLabel",
+          "address",
+          "description",
+          "imageUrl",
+          "coordinates"
+        ],
+        "title": "Place"
+      },
+      "RoutePlan": {
+        "properties": {
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "dateLabel": {
+            "type": "string",
+            "title": "Datelabel"
+          },
+          "travelersLabel": {
+            "type": "string",
+            "title": "Travelerslabel"
+          },
+          "budgetLabel": {
+            "type": "string",
+            "title": "Budgetlabel"
+          },
+          "cityGuide": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CityGuide"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DayPlan"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "places": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Place"
+            },
+            "type": "object",
+            "title": "Places"
+          }
+        },
+        "type": "object",
+        "required": [
+          "city",
+          "dateLabel",
+          "travelersLabel",
+          "budgetLabel",
+          "days",
+          "places"
+        ],
+        "title": "RoutePlan"
+      },
+      "SeasonalityMonth": {
+        "properties": {
+          "month": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Month"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "score": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Score"
+          },
+          "level": {
+            "type": "string",
+            "title": "Level"
+          },
+          "isTripMonth": {
+            "type": "boolean",
+            "title": "Istripmonth",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "label",
+          "score",
+          "level"
+        ],
+        "title": "SeasonalityMonth"
+      },
+      "TransitLeg": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "walk",
+              "taxi",
+              "metro"
+            ],
+            "title": "Mode"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "label"
+        ],
+        "title": "TransitLeg"
+      },
+      "TripCreated": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "ready",
+              "failed"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "TripCreated"
+      },
+      "TripDraft": {
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "title": "Startdate"
+          },
+          "startTime": {
+            "type": "string",
+            "title": "Starttime"
+          },
+          "endDate": {
+            "type": "string",
+            "title": "Enddate"
+          },
+          "endTime": {
+            "type": "string",
+            "title": "Endtime"
+          },
+          "budget": {
+            "type": "integer",
+            "maximum": 9999999.0,
+            "minimum": 0.0,
+            "title": "Budget"
+          },
+          "adults": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Adults",
+            "default": 2
+          },
+          "children": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Children",
+            "default": 0
+          },
+          "interests": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "sights",
+                "museums",
+                "gastro",
+                "walks",
+                "nature",
+                "unusual"
+              ]
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "pace": {
+            "type": "string",
+            "enum": [
+              "calm",
+              "medium",
+              "active"
+            ],
+            "title": "Pace",
+            "default": "medium"
+          },
+          "findHousing": {
+            "type": "boolean",
+            "title": "Findhousing",
+            "default": false
+          },
+          "destination": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Destination"
+          }
+        },
+        "type": "object",
+        "required": [
+          "startDate",
+          "startTime",
+          "endDate",
+          "endTime",
+          "budget",
+          "destination"
+        ],
+        "title": "TripDraft"
+      },
+      "TripEditDraft": {
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "title": "Startdate"
+          },
+          "startTime": {
+            "type": "string",
+            "title": "Starttime"
+          },
+          "endDate": {
+            "type": "string",
+            "title": "Enddate"
+          },
+          "endTime": {
+            "type": "string",
+            "title": "Endtime"
+          },
+          "budget": {
+            "type": "integer",
+            "maximum": 9999999.0,
+            "minimum": 0.0,
+            "title": "Budget"
+          },
+          "adults": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Adults",
+            "default": 2
+          },
+          "children": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Children",
+            "default": 0
+          },
+          "interests": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "sights",
+                "museums",
+                "gastro",
+                "walks",
+                "nature",
+                "unusual"
+              ]
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "pace": {
+            "type": "string",
+            "enum": [
+              "calm",
+              "medium",
+              "active"
+            ],
+            "title": "Pace",
+            "default": "medium"
+          },
+          "findHousing": {
+            "type": "boolean",
+            "title": "Findhousing",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "startDate",
+          "startTime",
+          "endDate",
+          "endTime",
+          "budget"
+        ],
+        "title": "TripEditDraft",
+        "description": "Editable trip fields; destination stays server-owned."
+      },
+      "TripResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "ready",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/TripDraft"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoutePlan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "draft"
+        ],
+        "title": "TripResponse"
+      },
+      "TripStateResponse": {
+        "properties": {
+          "packing": {
+            "items": {
+              "$ref": "#/components/schemas/PackingBlock"
+            },
+            "type": "array",
+            "title": "Packing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "packing"
+        ],
+        "title": "TripStateResponse"
+      },
+      "TripStateUpdate": {
+        "properties": {
+          "packing": {
+            "items": {
+              "$ref": "#/components/schemas/PackingBlock"
+            },
+            "type": "array",
+            "title": "Packing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "packing"
+        ],
+        "title": "TripStateUpdate"
+      },
+      "TripSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "dateLabel": {
+            "type": "string",
+            "title": "Datelabel"
+          },
+          "travelersLabel": {
+            "type": "string",
+            "title": "Travelerslabel"
+          },
+          "budgetLabel": {
+            "type": "string",
+            "title": "Budgetlabel"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "ready",
+              "failed"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "city",
+          "dateLabel",
+          "travelersLabel",
+          "budgetLabel",
+          "status"
+        ],
+        "title": "TripSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+import time
 from datetime import date, datetime
 from urllib.parse import urlencode
 
@@ -252,7 +253,10 @@ def test_max_mode_verifies_signature():
     settings.auth_mode = "max"
     settings.max_bot_token = "secret-token"
 
-    fields = {"auth_date": "1700000000", "user": json.dumps({"id": 42, "username": "ann"})}
+    fields = {
+        "auth_date": str(int(time.time())),
+        "user": json.dumps({"id": 42, "username": "ann"}),
+    }
     check_string = "\n".join(f"{k}={fields[k]}" for k in sorted(fields))
     secret = hmac.new(b"WebAppData", b"secret-token", hashlib.sha256).digest()
     signature = hmac.new(secret, check_string.encode(), hashlib.sha256).hexdigest()
@@ -265,6 +269,17 @@ def test_max_mode_verifies_signature():
     tampered = urlencode({**fields, "hash": "0" * 64})
     with pytest.raises(security.UnauthorizedError):
         security.resolve_user(f"tma {tampered}")
+
+    expired = {
+        "auth_date": str(int(time.time()) - security.MAX_AUTH_AGE_SECONDS - 10),
+        "user": json.dumps({"id": 42}),
+    }
+    expired_check = "\n".join(f"{k}={expired[k]}" for k in sorted(expired))
+    expired_sig = hmac.new(
+        secret, expired_check.encode(), hashlib.sha256
+    ).hexdigest()
+    with pytest.raises(security.UnauthorizedError, match="expired"):
+        security.resolve_user(f"tma {urlencode({**expired, 'hash': expired_sig})}")
 
     settings.auth_mode = "dev"
 
