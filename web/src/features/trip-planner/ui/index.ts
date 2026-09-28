@@ -1,6 +1,7 @@
 export {
     SoftImage,
     TripActionsMenu,
+    DeleteTripModal,
     Screen,
     PrimaryButton,
     SecondaryButton,

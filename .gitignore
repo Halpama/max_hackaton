@@ -6,3 +6,9 @@ backend/logs/
 # Trained ML artifacts — deploy to the stand separately (not via git).
 *.joblib
 environment_model.joblib
+.cursor/
+docs/
+deck/
+design-kit/
+.tmp*/
+*.pdf

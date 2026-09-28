@@ -41,7 +41,7 @@ from app.services.scheduler import (
     allocate_stays,
     build_day_slots,
     distribute,
-    prefer_indoor_when_wet,
+    limit_outdoor_when_stormy,
 )
 
 logger = get_logger(__name__)
@@ -122,6 +122,17 @@ async def _day_forecast(*, lat: float, lon: float, slots: list) -> dict[str, Day
         end=slots[-1].start.date(),
     )
     return {iso: DayWeather(**payload) for iso, payload in raw.items()}
+
+
+def _forecast_by_date(forecast: dict[str, DayWeather]) -> dict[date, DayWeather]:
+    """ISO-keyed forecast re-keyed to date objects (invalid dates are dropped)."""
+    out: dict[date, DayWeather] = {}
+    for iso, weather in forecast.items():
+        try:
+            out[date.fromisoformat(iso)] = weather
+        except ValueError:
+            continue
+    return out
 
 
 def _coords_ok(geo: dict) -> bool:
@@ -298,11 +309,25 @@ async def build_route(
         extra = "Часто упоминают: " + ", ".join(discovery_hints[:8])
         memory_block = f"{memory_block}\n{extra}".strip() if memory_block else extra
 
+    # Forecast before curation so the LLM can spread outdoor stops over dry days
+    # instead of only having post-hoc reordering applied to its picks.
+    forecast = await _day_forecast(lat=lat, lon=lon, slots=slots)
+
     selected = await llm.curate_places(
         draft,
         candidates,
         min(needed, len(candidates)),
         memory_block=memory_block or None,
+        forecast=_forecast_by_date(forecast),
+    )
+    # ≥90% осадков — максимум одно открытое место на день (страховка на случай,
+    # если модель проигнорировала правило или сработал рейтинг-fallback).
+    selected = llm.enforce_outdoor_caps(
+        selected,
+        candidates,
+        min(needed, len(candidates)),
+        llm.outdoor_cap_for_day(_forecast_by_date(forecast)),
+        days=len(slots),
     )
     # One meal per day when food was asked for, none of it otherwise.
     # Free-only trips skip paid meals even if gastro was selected.
@@ -318,9 +343,8 @@ async def build_route(
 
     # 3. Расчёт времени в пути
     await stage_start("transit")
-    # Forecast first so wet-day indoor preference can reshape each day before
-    # transit legs are computed against a frozen order.
-    forecast = await _day_forecast(lat=lat, lon=lon, slots=slots)
+    # Forecast already fetched before curation; wet-day indoor preference then
+    # reshapes each day before transit legs are computed against a frozen order.
     grouped = distribute(selected, slots, draft.pace)
     for day_index, slot in enumerate(slots):
         if day_index >= len(grouped):
@@ -328,9 +352,12 @@ async def build_route(
         day_weather = forecast.get(slot.start.date().isoformat())
         if day_weather is None:
             continue
-        grouped[day_index] = prefer_indoor_when_wet(
+        # Жёсткое правило дня: при ≥90% осадков остаётся максимум одна
+        # открытая точка (последняя по ходу дня), остальные вычеркиваются.
+        # Порядок внутри дня не трогаем — он уже близок к оптимальному по
+        # расстояниям, а суточный прогноз всё равно не знает часы дождя.
+        grouped[day_index] = limit_outdoor_when_stormy(
             grouped[day_index],
-            weather_icon=day_weather.icon,
             precipitation_chance=day_weather.precipitation_chance,
         )
     metro = transit.has_metro(city)

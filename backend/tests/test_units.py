@@ -1,6 +1,8 @@
+import asyncio
 import hashlib
 import hmac
 import json
+import time
 from datetime import date, datetime
 from urllib.parse import urlencode
 
@@ -8,8 +10,11 @@ import pytest
 
 from app.core import security
 from app.core.config import settings
+from app.schemas.trip import DayWeather, TripDraft
 from app.services import budget, formatting
+from app.services import llm as llm_module
 from app.services.llm import extract_json
+from app.services.places import PlaceCandidate
 from app.services.places import (
     normalize_title,
     parse_rate,
@@ -248,7 +253,10 @@ def test_max_mode_verifies_signature():
     settings.auth_mode = "max"
     settings.max_bot_token = "secret-token"
 
-    fields = {"auth_date": "1700000000", "user": json.dumps({"id": 42, "username": "ann"})}
+    fields = {
+        "auth_date": str(int(time.time())),
+        "user": json.dumps({"id": 42, "username": "ann"}),
+    }
     check_string = "\n".join(f"{k}={fields[k]}" for k in sorted(fields))
     secret = hmac.new(b"WebAppData", b"secret-token", hashlib.sha256).digest()
     signature = hmac.new(secret, check_string.encode(), hashlib.sha256).hexdigest()
@@ -261,6 +269,17 @@ def test_max_mode_verifies_signature():
     tampered = urlencode({**fields, "hash": "0" * 64})
     with pytest.raises(security.UnauthorizedError):
         security.resolve_user(f"tma {tampered}")
+
+    expired = {
+        "auth_date": str(int(time.time()) - security.MAX_AUTH_AGE_SECONDS - 10),
+        "user": json.dumps({"id": 42}),
+    }
+    expired_check = "\n".join(f"{k}={expired[k]}" for k in sorted(expired))
+    expired_sig = hmac.new(
+        secret, expired_check.encode(), hashlib.sha256
+    ).hexdigest()
+    with pytest.raises(security.UnauthorizedError, match="expired"):
+        security.resolve_user(f"tma {urlencode({**expired, 'hash': expired_sig})}")
 
     settings.auth_mode = "dev"
 
@@ -354,9 +373,9 @@ def test_environment_model_override_in_active_mode(tmp_path, monkeypatch) -> Non
     assert label == "outdoor"
     assert score >= settings.environment_model_threshold
 
-def test_prefer_indoor_when_wet_keeps_outdoor_later() -> None:
+def test_limit_outdoor_when_stormy_keeps_one_open_air_stop() -> None:
     from app.services.places import PlaceCandidate
-    from app.services.scheduler import prefer_indoor_when_wet
+    from app.services.scheduler import limit_outdoor_when_stormy
 
     def place(xid: str, kind: str) -> PlaceCandidate:
         return PlaceCandidate(
@@ -375,12 +394,35 @@ def test_prefer_indoor_when_wet_keeps_outdoor_later() -> None:
             environment_kind=kind,
         )
 
-    day = [place("park", "outdoor"), place("museum", "indoor"), place("cafe", "indoor")]
-    dry = prefer_indoor_when_wet(day, weather_icon="clear", precipitation_chance=10)
-    assert [c.xid for c in dry] == ["park", "museum", "cafe"]
+    day = [
+        place("park", "outdoor"),
+        place("museum", "indoor"),
+        place("fortress", "outdoor"),
+        place("gallery", "indoor"),
+        place("lookout", "outdoor"),
+    ]
 
-    wet = prefer_indoor_when_wet(day, weather_icon="rain", precipitation_chance=80)
-    assert [c.xid for c in wet] == ["museum", "cafe", "park"]
+    # Dry day and ordinary rain (80%) leave the day untouched — no reordering,
+    # no drops: a daily forecast cannot say when it will rain anyway.
+    dry = limit_outdoor_when_stormy(day, precipitation_chance=10)
+    assert [c.xid for c in dry] == ["park", "museum", "fortress", "gallery", "lookout"]
+    rain = limit_outdoor_when_stormy(day, precipitation_chance=80)
+    assert [c.xid for c in rain] == ["park", "museum", "fortress", "gallery", "lookout"]
+
+    # ≥90%: exactly one outdoor stop survives — the last by route order, put
+    # at the end of the day; all indoor/mixed stops keep their relative order.
+    storm = limit_outdoor_when_stormy(day, precipitation_chance=95)
+    assert [c.xid for c in storm] == ["museum", "gallery", "lookout"]
+    assert sum(1 for c in storm if c.environment_kind == "outdoor") == 1
+
+    # One or zero outdoor stops already satisfy the cap — nothing changes.
+    single = [place("park", "outdoor"), place("museum", "indoor")]
+    assert [c.xid for c in limit_outdoor_when_stormy(single, precipitation_chance=99)] == [
+        "park",
+        "museum",
+    ]
+    unknown = [place("odd", "unknown"), place("even", "unknown")]
+    assert len(limit_outdoor_when_stormy(unknown, precipitation_chance=99)) == 2
 
 
 def test_to_candidate_sets_environment_kind(monkeypatch) -> None:
@@ -402,3 +444,219 @@ def test_to_candidate_sets_environment_kind(monkeypatch) -> None:
     candidate = places.to_candidate(details, "Санкт-Петербург", {"walks"})
     assert candidate is not None
     assert candidate.environment_kind == "outdoor"
+
+
+# --------------------------------------------------------------------------
+# Weather-aware curation prompt (no new model: forecast + environment_kind
+# are fed into the existing GigaChat call). The tests below mirror the manual
+# stand cases — a rainy city and a clear one; run the same drafts against the
+# VDS with GIGACHAT configured to eyeball the real model replies.
+# --------------------------------------------------------------------------
+
+
+def _cand(xid: str, env: str, *, rate: int = 5, kind: str = "location") -> PlaceCandidate:
+    return PlaceCandidate(
+        xid=xid,
+        title=f"Место {xid}",
+        coordinates=(30.33, 59.94),
+        kinds=[],
+        rate=rate,
+        category="Категория",
+        category_kind=kind,  # type: ignore[arg-type]
+        address="",
+        description="",
+        image_url="",
+        city="Санкт-Петербург",
+        environment_kind=env,
+    )
+
+
+def _draft() -> TripDraft:
+    return TripDraft(
+        destination="Санкт-Петербург",
+        startDate="2026-07-01",
+        startTime="10:00",
+        endDate="2026-07-02",
+        endTime="18:00",
+        budget=10000,
+        adults=2,
+        children=0,
+        interests=["sights"],
+        pace="medium",
+    )
+
+
+def _weather(icon: str, chance: int | None, *, label: str = "Дождь") -> DayWeather:
+    return DayWeather(
+        label=label if icon != "clear" else "Ясно",
+        icon=icon,
+        tempHigh=22,
+        tempLow=14,
+        precipitationChance=chance,
+    )
+
+
+def test_weather_forecast_block_marks_rainy_days():
+    from datetime import date as d
+
+    forecast = {
+        d(2026, 7, 1): _weather("rain", 80),
+        d(2026, 7, 2): _weather("clear", 10, label="Ясно"),
+    }
+    block = llm_module.weather_forecast_block(forecast)
+    assert "Погода на даты поездки" in block
+    assert "вероятность осадков 80%" in block
+    assert "дождливый день" in block
+    assert "Дождливых дней: 1 из 2" in block
+
+
+def test_weather_forecast_block_all_wet_and_none():
+    from datetime import date as d
+
+    assert llm_module.weather_forecast_block({}) == ""
+    assert llm_module.weather_forecast_block(None) == ""
+
+    all_wet = llm_module.weather_forecast_block(
+        {d(2026, 7, 1): _weather("storm", 90), d(2026, 7, 2): _weather("snow", 70)}
+    )
+    assert "Все дни под угрозой осадков" in all_wet
+
+    dry = llm_module.weather_forecast_block({d(2026, 7, 1): _weather("clear", 5)})
+    assert "Дождливых дней нет" in dry
+
+
+def test_weather_forecast_block_without_chance_uses_icon():
+    from datetime import date as d
+
+    # Icon says rain but Open-Meteo returned no probability — still a wet day.
+    block = llm_module.weather_forecast_block({d(2026, 7, 1): _weather("rain", None)})
+    assert "оценка по типу погоды" in block
+    assert "дождливый день" in block
+
+
+def test_weather_forecast_block_stormy_summary():
+    from datetime import date as d
+
+    storm = llm_module.weather_forecast_block(
+        {
+            d(2026, 7, 1): _weather("storm", 95),
+            d(2026, 7, 2): _weather("clear", 10, label="Ясно"),
+        }
+    )
+    assert "Дней с осадками ≥90%: 1" in storm
+    assert "максимум одно открытое место" in storm
+
+    # 80% is rainy but not stormy — the ≥90% line must not appear.
+    plain = llm_module.weather_forecast_block({d(2026, 7, 1): _weather("rain", 80)})
+    assert "≥90%" not in plain
+
+
+def test_outdoor_cap_for_day_only_stormy_days():
+    from datetime import date as d
+
+    caps = llm_module.outdoor_cap_for_day(
+        {
+            d(2026, 7, 1): _weather("storm", 95),
+            d(2026, 7, 2): _weather("rain", 80),
+            d(2026, 7, 3): _weather("clear", 5),
+        }
+    )
+    assert caps[d(2026, 7, 1)] == 1
+    assert caps[d(2026, 7, 2)] is None
+    assert caps[d(2026, 7, 3)] is None
+    assert llm_module.outdoor_cap_for_day(None) == {}
+
+
+def test_enforce_outdoor_caps_drops_extras_and_backfills():
+    # Модель (или рейтинг-fallback) набивает ливневый трип открытыми местами —
+    # страховка оставляет максимум по одному на штормовой день и добирает крытые.
+    candidates = [
+        _cand("p1", "outdoor", rate=7),
+        _cand("p2", "outdoor", rate=6),
+        _cand("p3", "outdoor", rate=5),
+        _cand("m1", "indoor", rate=4),
+        _cand("m2", "mixed", rate=3),
+        _cand("m3", "indoor", rate=2),
+    ]
+    picked = candidates[:3]
+    caps = {date(2026, 7, 1): 1}
+    result = llm_module.enforce_outdoor_caps(picked, candidates, 4, caps, days=1)
+    assert sum(1 for c in result if c.environment_kind == "outdoor") == 1
+    assert len(result) == 4
+    assert {c.xid for c in result} == {"p1", "m1", "m2", "m3"}
+
+    # Без штормовых дней список не трогается.
+    untouched = llm_module.enforce_outdoor_caps(picked, candidates, 4, {}, days=1)
+    assert untouched == picked
+
+
+def _captured_prompt(monkeypatch, *, forecast, candidates):
+    prompts: list[str] = []
+
+    async def fake_complete(messages, **kwargs):
+        prompts.append(messages[0]["content"])
+        return '{"stops": [' + ", ".join(
+            f'{{"id": "{c.xid}", "minutes": 60}}' for c in candidates
+        ) + "]}"
+
+    monkeypatch.setattr(settings, "gigachat_auth_key", "test-key")
+    monkeypatch.setattr(llm_module.gigachat, "complete", fake_complete)
+    picked = asyncio.run(
+        llm_module.curate_places(_draft(), candidates, len(candidates), forecast=forecast)
+    )
+    assert prompts, "curate_places must build exactly one prompt"
+    return prompts[0], picked
+
+
+def test_curate_prompt_includes_forecast_env_and_rule(monkeypatch):
+    from datetime import date as d
+
+    candidates = [_cand("museum", "indoor"), _cand("park", "outdoor")]
+    forecast = {d(2026, 7, 1): _weather("rain", 80)}
+    prompt, picked = _captured_prompt(monkeypatch, forecast=forecast, candidates=candidates)
+
+    assert "Погода на даты поездки" in prompt
+    assert "вероятность осадков 80%" in prompt
+    assert "окружение: крытое" in prompt
+    assert "окружение: открытое" in prompt
+    assert "не набирай такой день" in prompt
+    assert [c.xid for c in picked] == ["museum", "park"]
+
+
+def test_curate_prompt_omits_weather_when_no_forecast(monkeypatch):
+    # Trip beyond the forecast horizon: no invented rain, no weather rules.
+    candidates = [_cand("museum", "indoor"), _cand("park", "outdoor")]
+    prompt, _ = _captured_prompt(monkeypatch, forecast={}, candidates=candidates)
+
+    assert "Погода на даты поездки" not in prompt
+    assert "не набирай такой день" not in prompt
+    # Environment labels stay — they are cheap and always known.
+    assert "окружение:" in prompt
+
+
+def test_curate_prompt_clear_city_lists_dry_summary(monkeypatch):
+    from datetime import date as d
+
+    candidates = [_cand("street", "outdoor"), _cand("gallery", "indoor")]
+    forecast = {d(2026, 7, 1): _weather("clear", 10, label="Ясно")}
+    prompt, _ = _captured_prompt(monkeypatch, forecast=forecast, candidates=candidates)
+
+    assert "Дождливых дней нет" in prompt
+    assert "окружение: открытое" in prompt
+
+
+def test_curate_prompt_stormy_city_has_90_rule(monkeypatch):
+    from datetime import date as d
+
+    candidates = [
+        _cand("volcano", "outdoor"),
+        _cand("museum", "indoor"),
+        _cand("fortress", "outdoor"),
+    ]
+    forecast = {d(2026, 7, 1): _weather("storm", 95)}
+    prompt, _ = _captured_prompt(monkeypatch, forecast=forecast, candidates=candidates)
+
+    assert "максимум ОДНО открытое место" in prompt
+    assert "Дней с осадками ≥90%: 1" in prompt
+    # Прогноз суточный — в промпте есть прямое объяснение, почему правило на день.
+    assert "не знает, когда именно пойдёт дождь" in prompt

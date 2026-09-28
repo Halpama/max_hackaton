@@ -7,6 +7,7 @@ does not touch any route.
 import hashlib
 import hmac
 import json
+import time
 from dataclasses import dataclass
 from urllib.parse import parse_qsl
 
@@ -71,6 +72,24 @@ def verify_signature(raw: str, bot_token: str) -> bool:
     return hmac.compare_digest(expected, provided)
 
 
+def assert_auth_date_fresh(fields: dict[str, str], *, now: float | None = None) -> None:
+    """Reject stale initData in `max` mode (replay protection)."""
+    raw = fields.get("auth_date")
+    if not raw:
+        raise UnauthorizedError("initData missing auth_date")
+    try:
+        auth_date = int(raw)
+    except ValueError as exc:
+        raise UnauthorizedError("initData auth_date is invalid") from exc
+
+    age = (now if now is not None else time.time()) - auth_date
+    if age < -60:
+        # Clock skew tolerance: 1 minute into the future.
+        raise UnauthorizedError("initData auth_date is in the future")
+    if age > MAX_AUTH_AGE_SECONDS:
+        raise UnauthorizedError("initData expired")
+
+
 def extract_init_data(authorization: str | None) -> str:
     if not authorization:
         return ""
@@ -97,6 +116,7 @@ def resolve_user(authorization: str | None) -> AuthUser:
         raise UnauthorizedError("Invalid MAX initData signature")
 
     fields = parse_init_data(raw)
+    assert_auth_date_fresh(fields)
     user = _user_from_fields(fields, 0)
     if not user.max_user_id:
         raise UnauthorizedError("initData contains no user id")

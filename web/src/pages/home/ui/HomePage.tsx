@@ -11,7 +11,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input, Icon16SearchOutline } from "@maxhub/max-ui";
 import { ROUTES } from "@/shared/config";
 import {
-    CompassIcon,
+    DeleteTripModal,
     HeartIcon,
     InfoIcon,
     Screen,
@@ -32,6 +32,7 @@ import {
 } from "@/features/trip-planner/lib/cityImage";
 import { formatPlaceTitle } from "@/features/trip-planner/lib/format";
 import tripStyles from "@/features/trip-planner/ui/shared/trip.module.css";
+import EmptyState from "@/shared/ui/EmptyState";
 import styles from "@/features/trip-planner/ui/home/home.module.css";
 
 export function HomePage() {
@@ -219,12 +220,10 @@ function TripsTab({
                     ))}
                 </div>
             ) : trips.length === 0 ? (
-                <StatusView
-                    icon={<CompassIcon />}
+                <EmptyState
                     title="Поездок пока нет"
-                    text="Создайте первую — ИИ подберёт места и соберёт маршрут по дням."
-                    actionLabel="Новая поездка"
-                    onAction={onCreate}
+                    description="Соберите первый маршрут, и мы подберём места по дням."
+                    action={{ label: "Собрать маршрут", onClick: onCreate }}
                 />
             ) : (
                 <div className={styles.grid}>
@@ -316,76 +315,6 @@ function TripsTab({
                 />
             ) : null}
         </div>
-    );
-}
-
-function DeleteTripModal({
-    city,
-    busy,
-    onCancel,
-    onConfirm,
-}: {
-    city: string;
-    busy: boolean;
-    onCancel: () => void;
-    onConfirm: () => void;
-}) {
-    const titleId = useId();
-
-    useEffect(() => {
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape" && !busy) onCancel();
-        };
-        const prev = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
-        window.addEventListener("keydown", onKey);
-        return () => {
-            document.body.style.overflow = prev;
-            window.removeEventListener("keydown", onKey);
-        };
-    }, [busy, onCancel]);
-
-    return createPortal(
-        <div
-            className={styles.confirmRoot}
-            role="presentation"
-            onClick={onCancel}
-        >
-            <div
-                className={styles.confirmModal}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={titleId}
-                onClick={(event) => event.stopPropagation()}
-            >
-                <h2 id={titleId} className={styles.confirmTitle}>
-                    Удалить поездку?
-                </h2>
-                <p className={styles.confirmText}>
-                    Маршрут «{city}» исчезнет из списка. Избранные места и
-                    данные поездки останутся в системе.
-                </p>
-                <div className={styles.confirmActions}>
-                    <button
-                        type="button"
-                        className={styles.confirmCancel}
-                        disabled={busy}
-                        onClick={onCancel}
-                    >
-                        Отмена
-                    </button>
-                    <button
-                        type="button"
-                        className={styles.confirmDelete}
-                        disabled={busy}
-                        onClick={onConfirm}
-                    >
-                        {busy ? "Удаляем…" : "Удалить"}
-                    </button>
-                </div>
-            </div>
-        </div>,
-        document.body,
     );
 }
 

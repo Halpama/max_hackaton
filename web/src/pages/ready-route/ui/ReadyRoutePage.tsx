@@ -7,6 +7,7 @@ import {
     CalendarIcon,
     CityGuidePanel,
     CompassIcon,
+    DeleteTripModal,
     DayRouteMap,
     DayTabs,
     DayWeatherBadge,
@@ -45,6 +46,8 @@ export function ReadyRoutePage() {
         navigate(ROUTES.newTrip);
     };
     const [actionsOpen, setActionsOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const requestedTripId = searchParams.get("tripId");
     const requestedDayId = searchParams.get("day");
@@ -182,15 +185,7 @@ export function ReadyRoutePage() {
                             }}
                             onDelete={() => {
                                 setActionsOpen(false);
-                                if (
-                                    window.confirm(
-                                        `Удалить маршрут «${route.city}»?`,
-                                    )
-                                ) {
-                                    void removeTrip(activeTripId).then(() =>
-                                        navigate(ROUTES.home),
-                                    );
-                                }
+                                setDeleteOpen(true);
                             }}
                         />
                     ) : null}
@@ -207,6 +202,23 @@ export function ReadyRoutePage() {
                     </span>
                 </p>
             </div>
+
+            {deleteOpen && activeTripId ? (
+                <DeleteTripModal
+                    city={route.city}
+                    busy={deleting}
+                    onCancel={() => {
+                        if (!deleting) setDeleteOpen(false);
+                    }}
+                    onConfirm={() => {
+                        if (deleting) return;
+                        setDeleting(true);
+                        void removeTrip(activeTripId)
+                            .then(() => navigate(ROUTES.home))
+                            .finally(() => setDeleting(false));
+                    }}
+                />
+            ) : null}
 
             {mainTab === "route" ? (
                 <div key="route" className={styles.panel}>

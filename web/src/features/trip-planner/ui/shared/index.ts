@@ -1,5 +1,6 @@
 export { SoftImage } from "./SoftImage";
 export { TripActionsMenu } from "./TripActionsMenu";
+export { DeleteTripModal } from "./DeleteTripModal";
 export { Screen } from "./Screen";
 export {
     PrimaryButton,

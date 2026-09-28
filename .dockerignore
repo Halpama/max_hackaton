@@ -1,0 +1,23 @@
+# Root context is used only if someone builds from repo root.
+# Per-service builds use backend/ and web/ with their own .dockerignore.
+.git
+.github
+.cursor
+.DS_Store
+.tmp*
+.tmp_*/
+docs/
+deck/
+design-kit/
+*.pdf
+*.md
+!README.md
+backend/.venv
+backend/.env
+backend/logs
+backend/ml_data/*.joblib
+web/node_modules
+web/dist
+**/__pycache__
+**/.pytest_cache
+**/coverage

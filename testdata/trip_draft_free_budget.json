@@ -1,0 +1,13 @@
+{
+  "destination": "Санкт-Петербург",
+  "startDate": "2026-10-15",
+  "startTime": "11:00",
+  "endDate": "2026-10-16",
+  "endTime": "18:00",
+  "budget": 0,
+  "adults": 1,
+  "children": 0,
+  "interests": ["walks", "nature"],
+  "pace": "calm",
+  "findHousing": false
+}
