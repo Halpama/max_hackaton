@@ -22,7 +22,7 @@
 | Env-шаблоны         | `[backend/.env.example](backend/.env.example)`, `[web/.env.example](web/.env.example)` |
 
 
-Публичный стенд (если поднят): мини-приложение [https://2-rist.ru](https://2-rist.ru) · API [https://api.2-rist.ru](https://api.2-rist.ru) · Swagger [https://api.2-rist.ru/docs](https://api.2-rist.ru/docs)
+Публичный стенд: мини-приложение [https://2-rist.ru](https://2-rist.ru) · API [https://api.2-rist.ru](https://api.2-rist.ru) · Swagger [https://api.2-rist.ru/docs](https://api.2-rist.ru/docs)
 
 ---
 
