@@ -27,7 +27,7 @@ class TripStateUpdate(CamelModel):
 
 class LedgerEntryIn(CamelModel):
     kind: LedgerKind
-    amount: int = Field(ge=1)
+    amount: int = Field(ge=1, le=999999)
     title: str = ""
     date: date_type | None = None
 

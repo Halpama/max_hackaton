@@ -7,8 +7,21 @@ import {
   type LedgerEntry,
   type LedgerKind,
 } from '../../model/useTripLocalState'
-import { PlusIcon } from '../shared/icons-sprite'
+import { CalendarIcon, PlusIcon } from '../shared/icons-sprite'
 import styles from './BudgetPanel.module.css'
+
+const MAX_LEDGER_AMOUNT = 999999
+
+function clampDate(value: string, minDate?: string, maxDate?: string) {
+  if (minDate && value < minDate) return minDate
+  if (maxDate && value > maxDate) return maxDate
+  return value
+}
+
+function formatDateInput(value: string) {
+  const [year, month, day] = value.split('-')
+  return year && month && day ? `${day}.${month}.${year}` : value
+}
 
 interface BudgetPanelProps {
   plannedBudget: number
@@ -17,6 +30,8 @@ interface BudgetPanelProps {
   toppedUp: number
   ledger: LedgerEntry[]
   todayIso: () => string
+  minDate?: string
+  maxDate?: string
   onAdd: (input: { kind: LedgerKind; amount: number; title: string; date: string }) => void
   onRemove: (id: string) => void
 }
@@ -28,6 +43,8 @@ export function BudgetPanel({
   toppedUp,
   ledger,
   todayIso,
+  minDate,
+  maxDate,
   onAdd,
   onRemove,
 }: BudgetPanelProps) {
@@ -127,7 +144,9 @@ export function BudgetPanel({
 
       {modalOpen ? (
         <BudgetModal
-          defaultDate={todayIso()}
+          defaultDate={clampDate(todayIso(), minDate, maxDate)}
+          minDate={minDate}
+          maxDate={maxDate}
           onClose={() => setModalOpen(false)}
           onSubmit={(payload) => {
             onAdd(payload)
@@ -141,10 +160,14 @@ export function BudgetPanel({
 
 function BudgetModal({
   defaultDate,
+  minDate,
+  maxDate,
   onClose,
   onSubmit,
 }: {
   defaultDate: string
+  minDate?: string
+  maxDate?: string
   onClose: () => void
   onSubmit: (payload: { kind: LedgerKind; amount: number; title: string; date: string }) => void
 }) {
@@ -165,8 +188,8 @@ function BudgetModal({
   const submit = (event: FormEvent) => {
     event.preventDefault()
     const value = Number(amount.replace(/\s/g, '').replace(',', '.'))
-    if (!Number.isFinite(value) || value <= 0) return
-    onSubmit({ kind, amount: value, title, date })
+    if (!Number.isFinite(value) || value <= 0 || value > MAX_LEDGER_AMOUNT) return
+    onSubmit({ kind, amount: value, title, date: clampDate(date, minDate, maxDate) })
   }
 
   return createPortal(
@@ -207,9 +230,14 @@ function BudgetModal({
               className={styles.fieldInput}
               inputMode="decimal"
               placeholder="0"
+              max={MAX_LEDGER_AMOUNT}
               value={amount}
               autoFocus
-              onChange={(event) => setAmount(event.target.value.replace(/[^\d\s.,]/g, ''))}
+              onChange={(event) => {
+                const next = event.target.value.replace(/[^\d\s.,]/g, '')
+                const numeric = Number(next.replace(/\s/g, '').replace(',', '.'))
+                setAmount(Number.isFinite(numeric) && numeric > MAX_LEDGER_AMOUNT ? String(MAX_LEDGER_AMOUNT) : next)
+              }}
             />
           </label>
 
@@ -225,12 +253,21 @@ function BudgetModal({
 
           <label className={styles.field}>
             <span className={styles.fieldLabel}>Дата</span>
-            <input
-              className={styles.fieldInput}
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-            />
+            <span className={styles.dateInput}>
+              <span className={styles.dateValue}>{formatDateInput(date)}</span>
+              <CalendarIcon />
+              <input
+                className={styles.dateNative}
+                type="date"
+                value={date}
+                min={minDate}
+                max={maxDate}
+                aria-label="Дата операции"
+                onChange={(event) => {
+                  if (event.target.value) setDate(clampDate(event.target.value, minDate, maxDate))
+                }}
+              />
+            </span>
           </label>
 
           <div className={styles.modalActions}>

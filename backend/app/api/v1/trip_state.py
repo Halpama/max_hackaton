@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import DbSession, OwnedTrip
 from app.core.errors import NotFoundError
@@ -69,13 +69,19 @@ async def get_ledger(trip: OwnedTrip, session: DbSession) -> list[LedgerEntryOut
 async def post_ledger(
     trip: OwnedTrip, payload: LedgerEntryIn, session: DbSession
 ) -> LedgerEntryOut:
+    entry_date = payload.date or date.today()
+    if not trip.start_at.date() <= entry_date <= trip.end_at.date():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Operation date must be within the trip dates",
+        )
     entry = await add_ledger_entry(
         session,
         trip.id,
         kind=payload.kind,
         amount=payload.amount,
         title=payload.title.strip() or DEFAULT_TITLES[payload.kind],
-        entry_date=payload.date or date.today(),
+        entry_date=entry_date,
     )
     await record_event(
         "expenses_updated",

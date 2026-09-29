@@ -267,9 +267,9 @@
   inset: 0;
   z-index: 1000;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 12px;
+  padding: 12px 12px calc(80px + var(--tp-safe-bottom, 0px));
   background: rgba(15, 23, 42, 0.35);
   backdrop-filter: blur(4px);
   animation: fadeIn 0.2s ease both;
@@ -277,6 +277,8 @@
 
 .modal {
   width: min(480px, 100%);
+  max-height: calc(100dvh - 92px);
+  overflow-y: auto;
   border-radius: 20px 20px 18px 18px;
   background: #fff;
   padding: 10px 16px 16px;
@@ -367,6 +369,40 @@
   color: var(--tp-text);
   outline: none;
   transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dateInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #f7f8fc;
+  color: var(--tp-text);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.dateValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.dateInput svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.dateNative {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .fieldInput:focus {
