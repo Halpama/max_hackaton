@@ -3,6 +3,7 @@ import type { Place } from '../../model'
 import { formatPlaceTitle } from '../../lib/format'
 import { parseOpeningHours } from '../../lib/openingHours'
 import { CategoryBadge } from '../shared/CategoryBadge'
+import { EnvironmentBadge } from '../shared/EnvironmentBadge'
 import { ChevronDownIcon, StarIcon } from '../shared/icons-sprite'
 import { SoftImage } from '../shared/SoftImage'
 import styles from './PlaceHero.module.css'
@@ -82,6 +83,7 @@ export function PlaceDetails({ place, pricing = 'party' }: PlaceDetailsProps) {
             <CategoryBadge kind={display.categoryKind} category={display.category} size="sm" />
             {display.category}
             {display.ratingSource === 'catalog' ? ` · ${display.reviewsLabel}` : ''}
+            <EnvironmentBadge kind={display.environmentKind} />
           </p>
         </div>
 
