@@ -347,6 +347,8 @@ export function ReadyRoutePage() {
                         toppedUp={toppedUp}
                         ledger={ledger}
                         todayIso={todayIso}
+                        minDate={activeTripDraft?.startDate}
+                        maxDate={activeTripDraft?.endDate}
                         onAdd={addLedgerEntry}
                         onRemove={removeLedgerEntry}
                     />
