@@ -40,19 +40,25 @@
   justify-content: center;
   gap: 8px;
   padding: 12px 24px;
-  border: 1px solid var(--tp-border);
-  background: var(--tp-surface);
+  border: 1px solid var(--tp-primary);
+  background: var(--tp-primary);
   border-radius: 12px;
   font-weight: 500;
-  color: var(--tp-text);
+  color: #fff;
   cursor: pointer;
-  transition: all 0.15s ease;
+  box-shadow: 0 8px 18px rgba(0, 122, 255, 0.24);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
   min-width: 140px;
 }
 
 .action:hover {
-  background: var(--tp-surface-hover);
-  border-color: var(--tp-border-hover);
+  background: var(--tp-primary-deep);
+  border-color: var(--tp-primary-deep);
+  box-shadow: 0 10px 22px rgba(0, 122, 255, 0.3);
 }
 
 .action:active {

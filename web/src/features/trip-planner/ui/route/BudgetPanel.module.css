@@ -267,7 +267,7 @@
   inset: 0;
   z-index: 1000;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   padding: 12px;
   background: rgba(15, 23, 42, 0.35);
@@ -280,8 +280,8 @@
   border-radius: 20px 20px 18px 18px;
   background: #fff;
   padding: 10px 16px 16px;
-  box-shadow: 0 -8px 40px rgba(15, 23, 42, 0.18);
-  animation: sheetIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+  animation: modalIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .modalHandle {
@@ -440,14 +440,14 @@
   }
 }
 
-@keyframes sheetIn {
+@keyframes modalIn {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(8px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -465,10 +465,6 @@
 }
 
 @media (min-width: 520px) {
-  .modalRoot {
-    align-items: center;
-  }
-
   .modal {
     border-radius: 20px;
   }
